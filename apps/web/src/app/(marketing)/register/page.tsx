@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 const TIERS = [
   {
     name: 'Basic',
-    price: 'Free to start',
+    price: 'LKR 2,900/mo',
     description: 'Get started with a single venue',
     features: ['1 location', 'Marketplace profile', 'Admin & receptionist roles'],
   },
@@ -162,7 +162,7 @@ export default function RegisterPage() {
         <div>
           <h2 className="mb-1 text-center text-lg font-semibold">Plans built for every stage</h2>
           <p className="mb-4 text-center text-sm text-muted-foreground">
-            All accounts start on the <strong>Basic plan at no cost</strong>. Upgrade anytime from your dashboard settings.
+            All accounts start on the <strong>Basic plan</strong>. You can upgrade anytime from your dashboard settings.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
             {TIERS.map((tier) => (
