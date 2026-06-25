@@ -1,37 +1,33 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RegisterBodySchema, type RegisterBody } from '@sports-booking/types'
 import { Check, Loader2 } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
-type TierKey = 'basic' | 'pro' | 'elite'
-
-const TIERS: Array<{ key: TierKey; name: string; description: string; features: string[] }> = [
+const TIERS = [
   {
-    key: 'basic',
     name: 'Basic',
+    price: 'Free to start',
     description: 'Get started with a single venue',
     features: ['1 location', 'Marketplace profile', 'Admin & receptionist roles'],
   },
   {
-    key: 'pro',
     name: 'Pro',
+    price: 'LKR 7,900/mo',
     description: 'Grow across multiple locations',
     features: ['Multi-location support', 'Branded subdomain', 'Location manager role'],
   },
   {
-    key: 'elite',
     name: 'Elite',
+    price: 'LKR 19,900/mo',
     description: 'Full control for established brands',
     features: ['Unlimited locations', 'Custom domain', 'Full RBAC & custom email'],
   },
@@ -39,7 +35,6 @@ const TIERS: Array<{ key: TierKey; name: string; description: string; features: 
 
 export default function RegisterPage() {
   const { register } = useAuth()
-  const [selectedTier, setSelectedTier] = useState<TierKey>('basic')
 
   const form = useForm<RegisterBody>({
     resolver: zodResolver(RegisterBodySchema),
@@ -167,20 +162,16 @@ export default function RegisterPage() {
         <div>
           <h2 className="mb-1 text-center text-lg font-semibold">Plans built for every stage</h2>
           <p className="mb-4 text-center text-sm text-muted-foreground">
-            New accounts start on the Basic plan — upgrade anytime from Settings.
+            All accounts start on the <strong>Basic plan at no cost</strong>. Upgrade anytime from your dashboard settings.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
             {TIERS.map((tier) => (
-              <button
-                key={tier.key}
-                type="button"
-                onClick={() => setSelectedTier(tier.key)}
-                className={cn(
-                  'rounded-lg border bg-background p-4 text-left transition-colors',
-                  selectedTier === tier.key ? 'border-primary ring-2 ring-primary' : 'hover:border-primary/50',
-                )}
+              <div
+                key={tier.name}
+                className="rounded-lg border bg-background p-4 text-left"
               >
                 <div className="font-semibold">{tier.name}</div>
+                <div className="mb-1 text-sm font-medium text-primary">{tier.price}</div>
                 <p className="mb-3 text-sm text-muted-foreground">{tier.description}</p>
                 <ul className="space-y-1 text-sm">
                   {tier.features.map((feature) => (
@@ -190,7 +181,7 @@ export default function RegisterPage() {
                     </li>
                   ))}
                 </ul>
-              </button>
+              </div>
             ))}
           </div>
         </div>

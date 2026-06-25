@@ -6,7 +6,7 @@ export const RegisterBodySchema = z.object({
   phone:        z.string().min(1),
   password:     z.string().min(8),
   company_name: z.string().min(1),
-  slug:         z.string().min(1).optional(),
+  slug:         z.preprocess((v) => (v === '' ? undefined : v), z.string().min(1).optional()),
 })
 
 export const LoginBodySchema = z.object({
