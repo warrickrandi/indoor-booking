@@ -21,7 +21,8 @@
   },
   "pnpm": {
     "overrides": {
-      "ioredis": "5.10.1"
+      "ioredis": "5.10.1",
+      "next": "^15.5.19"
     }
   }
 }
