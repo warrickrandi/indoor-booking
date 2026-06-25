@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 
 import type { ApiMeta } from './api'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+// Use API_INTERNAL_URL for server-side fetches (127.0.0.1 avoids the Node.js
+// IPv6-first resolution bug where fetch('localhost:...') tries ::1 before 127.0.0.1,
+// causing ECONNREFUSED against a Fastify server bound to 0.0.0.0).
+const API_URL = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? ''
 
 interface PublicApiResponse<T> {
   data: T
@@ -16,9 +19,22 @@ interface ApiErrorBody {
 }
 
 export async function fetchPublic<T>(path: string): Promise<PublicApiResponse<T>> {
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' })
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}${path}`, { cache: 'no-store' })
+  } catch {
+    throw new Error('API server is unreachable')
+  }
+
   const text = await res.text()
-  const body = text ? JSON.parse(text) : null
+  let body: unknown = null
+  if (text) {
+    try {
+      body = JSON.parse(text)
+    } catch {
+      throw new Error('Invalid response from API server')
+    }
+  }
 
   if (!res.ok) {
     if (res.status === 404) {

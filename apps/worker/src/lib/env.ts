@@ -21,8 +21,8 @@ const EnvSchema = z.object({
 
   FRONTEND_URL: z.string().url(),
 
-  VERCEL_TOKEN:      z.string().min(1).optional(),
-  VERCEL_PROJECT_ID: z.string().min(1).optional(),
+  VERCEL_TOKEN:      z.preprocess(v => v === '' ? undefined : v, z.string().min(1).optional()),
+  VERCEL_PROJECT_ID: z.preprocess(v => v === '' ? undefined : v, z.string().min(1).optional()),
 })
 
 const parsed = EnvSchema.safeParse(process.env)

@@ -387,23 +387,184 @@ Exit code 1 + "DOUBLE BOOKING VULNERABILITY DETECTED" means the lock failed.
 
 ## Deployment
 
-### API — Railway
+### Architecture overview
 
-- `apps/api/Procfile`: `web: node dist/server.js`
-- `apps/api/railway.json`: build command `pnpm build`, start command from Procfile
-- Set all env vars in the Railway project settings
-- `prisma migrate deploy` runs as a release command before start
+```
+GitLab repo
+    │
+    ├── Vercel ──────── apps/web (Next.js) ── NEXT_PUBLIC_API_URL ──────────┐
+    │                                                                        │
+    └── Railway                                                              │
+          ├── apps/api (Fastify) ◄──────────────────────────────────────────┘
+          │     └── Pre-deploy: prisma migrate deploy
+          └── apps/worker (BullMQ)
 
-### Web — Vercel
+External databases (reachable by all Railway services):
+    ├── Neon       → DATABASE_URL
+    └── Upstash    → REDIS_URL
+```
 
-- Set `NEXT_PUBLIC_API_URL` to the Railway API URL
-- Root directory: `apps/web`
-- Framework preset: Next.js
+| Service | Host | Why |
+|---|---|---|
+| `apps/web` | Vercel | Next.js native |
+| `apps/api` | Railway | Persistent Fastify server |
+| `apps/worker` | Railway (separate service) | Persistent BullMQ process |
+| PostgreSQL | Neon | Serverless Postgres, Vercel-native integration |
+| Redis | Upstash | Serverless Redis, works from both Vercel and Railway |
 
-### Worker — Railway (separate service)
+---
 
-- `apps/worker/Procfile`: `worker: node dist/index.js`
-- Must share the same `DATABASE_URL` and `REDIS_URL` as the API
+### Phase 1 — Neon PostgreSQL
+
+1. Go to [neon.tech](https://neon.tech) → **Sign up** → **New Project**
+   - Name: `indoor-booking`
+   - Region: closest to your users (e.g. `AWS ap-southeast-1` for Sri Lanka)
+
+2. On the dashboard → **Connection string** → select **Prisma** format → copy it:
+   ```
+   postgresql://user:password@ep-xxx.ap-southeast-1.aws.neon.tech/indoor_booking?sslmode=require
+   ```
+   Save this as your `DATABASE_URL`.
+
+---
+
+### Phase 2 — Upstash Redis
+
+1. Go to [upstash.com](https://upstash.com) → **Sign up** → **Create Database**
+   - Name: `indoor-booking`
+   - Type: **Regional** — same region as Neon
+
+2. On the database page → copy the **Redis URL**:
+   ```
+   rediss://default:password@xxx.upstash.io:6380
+   ```
+   Save this as your `REDIS_URL`.
+
+---
+
+### Phase 3 — Railway (API + Worker)
+
+1. Go to [railway.app](https://railway.app) → **New Project** → **Empty Project** → name it `indoor-booking`
+
+#### API service
+
+2. **+ New** → **GitHub/GitLab Repo** → connect GitLab → select your repo
+   - **Root Directory**: `apps/api`
+   - Click **Deploy**
+
+3. API service → **Variables** tab → **Raw Editor** → paste and fill in:
+
+```env
+DATABASE_URL=postgresql://user:password@ep-xxx.neon.tech/indoor_booking?sslmode=require
+REDIS_URL=rediss://default:password@xxx.upstash.io:6380
+
+VENUE_JWT_SECRET=         # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+PLAYER_JWT_SECRET=        # same command, run again
+PLATFORM_JWT_SECRET=      # same command, run again
+ENCRYPTION_KEY=           # same command, run again (must be exactly 64 hex chars)
+
+PAYHERE_MERCHANT_ID=your_payhere_merchant_id
+PAYHERE_SECRET=your_payhere_merchant_secret
+
+SMTP_HOST=your_smtp_host
+SMTP_PORT=587
+SMTP_FROM=noreply@yourplatform.com
+
+STORAGE_ENDPOINT=https://xxx.r2.cloudflarestorage.com
+STORAGE_ACCESS_KEY=your_r2_key
+STORAGE_SECRET_KEY=your_r2_secret
+STORAGE_BUCKET=indoor-booking
+
+NODE_ENV=production
+PORT=3001
+HOST=0.0.0.0
+ALLOWED_ORIGINS=https://your-web.vercel.app
+
+PLATFORM_DOMAIN=yourplatform.com
+FRONTEND_URL=https://your-web.vercel.app
+API_URL=https://your-api.up.railway.app/api/v1
+```
+
+4. API service → **Settings** → **Deploy** → **Pre-deploy command**:
+   ```
+   npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+   ```
+
+5. Wait for green **Healthy** status. Copy the Railway-generated URL (e.g. `https://indoor-booking-api.up.railway.app`) — this is your API URL.
+
+6. Run the seed once — API service → **Shell** tab:
+   ```bash
+   pnpm db:seed
+   ```
+
+#### Worker service
+
+7. Same Railway project → **+ New** → **GitHub/GitLab Repo** → same repo
+   - **Root Directory**: `apps/worker`
+
+8. Worker → **Variables** → paste (subset of API vars):
+
+```env
+DATABASE_URL=     (same as API)
+REDIS_URL=        (same as API)
+ENCRYPTION_KEY=   (same as API)
+SMTP_HOST=        (same as API)
+SMTP_PORT=587
+SMTP_FROM=        (same as API)
+SMTP_USER=        (if your SMTP requires auth)
+SMTP_PASSWORD=    (if your SMTP requires auth)
+FRONTEND_URL=     (same as API)
+NODE_ENV=production
+```
+
+---
+
+### Phase 4 — Vercel (Web)
+
+1. Go to [vercel.com](https://vercel.com) → **Add New Project** → **Continue with GitLab** → select your repo
+
+2. Configure:
+
+   | Setting | Value |
+   |---|---|
+   | **Root Directory** | `apps/web` |
+   | **Framework Preset** | Next.js (auto-detected) |
+   | **Build Command** | leave default |
+   | **Output Directory** | leave default |
+
+3. **Environment Variables** — add:
+
+   ```
+   NEXT_PUBLIC_API_URL          https://your-api.up.railway.app/api/v1
+   NEXT_PUBLIC_PLATFORM_DOMAIN  yourplatform.com
+   ```
+
+4. Click **Deploy**. Copy your Vercel URL (e.g. `https://indoor-booking.vercel.app`).
+
+5. Go back to Railway → API service → Variables → update these two to match your real Vercel URL:
+   ```
+   ALLOWED_ORIGINS=https://indoor-booking.vercel.app
+   FRONTEND_URL=https://indoor-booking.vercel.app
+   ```
+
+---
+
+### Phase 5 — Verify
+
+```
+# API health check — should return { data: { status: 'ok', db: 'ok', redis: 'ok' } }
+https://your-api.up.railway.app/api/v1/health
+
+# Web — landing page
+https://indoor-booking.vercel.app
+
+# Platform admin login
+https://indoor-booking.vercel.app/login
+Email:    platformadmin@test.com
+Password: Test1234!
+```
+
+Every GitLab push to your default branch auto-deploys all three services simultaneously.
 
 ---
 
