@@ -25,7 +25,7 @@ export interface SubscriptionPlanRef {
 export interface CurrentSubscription {
   plan: SubscriptionPlanRef
   billing_cycle: BillingCycle
-  status: 'trialing' | 'cancelling' | 'active'
+  status: 'trialing' | 'cancelling' | 'active' | 'suspended'
   current_period_end: string | null
   days_until_renewal: number | null
   is_trial: boolean

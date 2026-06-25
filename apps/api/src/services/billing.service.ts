@@ -97,7 +97,13 @@ export async function getCurrentSubscription(companyId: string) {
 
   const now = new Date()
   const isTrial = company.trial_ends_at !== null && company.trial_ends_at > now
-  const status = isTrial ? 'trialing' : company.scheduled_plan_id !== null ? 'cancelling' : 'active'
+  const status = company.status === 'suspended'
+    ? 'suspended'
+    : isTrial
+      ? 'trialing'
+      : company.scheduled_plan_id !== null
+        ? 'cancelling'
+        : 'active'
   const cycle = company.billing_cycle as BillingCycle
 
   return {

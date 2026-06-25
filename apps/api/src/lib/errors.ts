@@ -44,3 +44,9 @@ export class ConflictError extends AppError {
     super(message, 409, 'CONFLICT')
   }
 }
+
+export class PaymentRequiredError extends AppError {
+  constructor(message = 'Subscription payment required') {
+    super(message, 402, 'PAYMENT_REQUIRED')
+  }
+}

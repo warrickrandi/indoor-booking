@@ -9,7 +9,7 @@ import { signVenueStaffToken, signVenueRefreshToken, signPlatformAdminToken } fr
 import { LOCATION_MANAGER_PERMISSIONS, RECEPTIONIST_PERMISSIONS } from '../lib/role-permissions.js'
 import { addEmailJob } from '../jobs/email.job.js'
 import { env } from '../lib/env.js'
-import { ConflictError, UnauthorizedError } from '../lib/errors.js'
+import { ConflictError, UnauthorizedError, PaymentRequiredError } from '../lib/errors.js'
 
 const BCRYPT_ROUNDS = 12
 const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -73,8 +73,15 @@ export async function registerVenueOwner(input: RegisterBody) {
   const result = await prisma.$transaction(async (tx) => {
     const plan = await tx.subscriptionPlan.findUniqueOrThrow({ where: { name: 'basic' } })
 
+    const trialEnd = new Date(Date.now() + 14 * 86_400_000)
     const company = await tx.company.create({
-      data: { name: input.company_name, slug, plan_id: plan.id },
+      data: {
+        name:                   input.company_name,
+        slug,
+        plan_id:                plan.id,
+        trial_ends_at:          trialEnd,
+        subscription_expires_at: trialEnd,
+      },
     })
 
     const user = await tx.user.create({
@@ -169,6 +176,10 @@ async function loadActiveMembership(userId: string) {
 
   if (!member) {
     throw new UnauthorizedError('No active company membership found')
+  }
+
+  if (member.company.status === 'suspended') {
+    throw new PaymentRequiredError('Your subscription has been suspended due to non-payment. Please contact support or settle your outstanding invoice.')
   }
 
   return {

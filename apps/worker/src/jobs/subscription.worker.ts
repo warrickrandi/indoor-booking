@@ -81,7 +81,25 @@ export const subscriptionLifecycleWorker = new Worker(
 
       if (elapsedDays >= GRACE_PERIOD_DAYS) {
         const basicPlan = await prisma.subscriptionPlan.findFirstOrThrow({ where: { tier: 'basic' } })
+
         if (company.plan_id === basicPlan.id) {
+          // Basic plan companies can't be downgraded — suspend them instead
+          if (company.status !== 'suspended') {
+            await prisma.company.update({
+              where: { id: company.id },
+              data:  { status: 'suspended' },
+            })
+            const ownerEmail = await findOwnerEmail(company.id)
+            if (ownerEmail) {
+              await sendEmail({
+                to:       ownerEmail,
+                template: 'subscription_expired',
+                data:     { upgradeUrl: `${env.FRONTEND_URL}/settings/billing` },
+                companyId: company.id,
+              })
+            }
+            downgrades++
+          }
           continue
         }
 

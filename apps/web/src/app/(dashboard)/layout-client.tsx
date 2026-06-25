@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
 import { useAuth } from '@/hooks/useAuth'
+import { useCurrentSubscription } from '@/hooks/useBilling'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -60,6 +61,36 @@ function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/)
   const initials = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '')
   return initials.join('') || '?'
+}
+
+function SubscriptionBanner() {
+  const { data: sub } = useCurrentSubscription()
+  if (!sub) return null
+
+  if (sub.status === 'suspended') {
+    return (
+      <div className="bg-destructive px-4 py-2 text-center text-sm font-medium text-destructive-foreground">
+        Your account is suspended due to non-payment.{' '}
+        <a href="/settings/billing" className="underline">Settle your invoice</a>{' '}
+        to restore access.
+      </div>
+    )
+  }
+
+  if (sub.is_trial && sub.trial_ends_at) {
+    const daysLeft = sub.days_until_renewal ?? 0
+    if (daysLeft <= 7) {
+      return (
+        <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white">
+          Your trial ends in {daysLeft} day{daysLeft !== 1 ? 's' : ''}.{' '}
+          <a href="/settings/billing" className="underline">Set up billing</a>{' '}
+          to keep your account active.
+        </div>
+      )
+    }
+  }
+
+  return null
 }
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
@@ -125,6 +156,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
+        <SubscriptionBanner />
         <header className="flex h-16 items-center justify-between border-b bg-background px-4">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
