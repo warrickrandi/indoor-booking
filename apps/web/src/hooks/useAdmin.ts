@@ -5,7 +5,7 @@ import type {
   UpdateGatewayDriverBody,
 } from '@sports-booking/types'
 
-import { adminGet, adminPut } from '@/lib/admin-api'
+import { adminGet, adminPost, adminPut } from '@/lib/admin-api'
 import type { BookingSummary } from './useBookings'
 
 export interface AdminStats {
@@ -254,6 +254,21 @@ export function useUpdateGatewayDriver() {
       adminPut<GatewayDriver>(`/admin/gateway-drivers/${driverId}`, body, { requireAuth: true }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'gateway-drivers'] })
+    },
+  })
+}
+
+export function useAdminMarkInvoicePaid(companyId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ invoiceId, paymentRef }: { invoiceId: string; paymentRef?: string }) =>
+      adminPost<AdminSubscriptionInvoice>(
+        `/admin/billing/invoices/${invoiceId}/mark-paid`,
+        { payment_ref: paymentRef ?? null },
+        { requireAuth: true },
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'companies', companyId] })
     },
   })
 }

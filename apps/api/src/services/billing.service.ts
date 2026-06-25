@@ -148,6 +148,7 @@ export async function applyInvoicePayment(tx: DbClient, invoice: InvoiceWithPlan
       billing_cycle:           inferBillingCycle(invoice.billing_period_start, invoice.billing_period_end),
       subscription_expires_at: invoice.billing_period_end,
       scheduled_plan_id:       null,
+      status:                  'active', // reactivate if previously suspended
     },
   })
 }

@@ -8,11 +8,13 @@ import {
   useAdminCompanyDetail,
   useAdminSubscriptionPlans,
   useUpdateCompanySubscription,
+  useAdminMarkInvoicePaid,
 } from '@/hooks/useAdmin'
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
@@ -40,6 +42,9 @@ export default function AdminCompanyDetailPage() {
   const updateSubscription = useUpdateCompanySubscription(companyId)
 
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null)
+  const [markPaidInvoiceId, setMarkPaidInvoiceId] = useState<string | null>(null)
+  const [paymentRef, setPaymentRef] = useState('')
+  const markInvoicePaid = useAdminMarkInvoicePaid(companyId)
 
   if (company.isLoading) {
     return <LoadingPanel />
@@ -149,6 +154,45 @@ export default function AdminCompanyDetailPage() {
             >
               {updateSubscription.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={markPaidInvoiceId !== null} onOpenChange={(open) => !open && setMarkPaidInvoiceId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Invoice as Paid</DialogTitle>
+            <DialogDescription>
+              Confirm manual payment receipt. This will activate the company&apos;s subscription immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="payment-ref">Payment Reference (optional)</Label>
+            <Input
+              id="payment-ref"
+              placeholder="Bank transfer ref, cheque no., etc."
+              value={paymentRef}
+              onChange={(e) => setPaymentRef(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMarkPaidInvoiceId(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={markInvoicePaid.isPending}
+              onClick={() => {
+                if (markPaidInvoiceId) {
+                  markInvoicePaid.mutate(
+                    { invoiceId: markPaidInvoiceId, paymentRef: paymentRef || undefined },
+                    { onSuccess: () => { setMarkPaidInvoiceId(null); setPaymentRef('') } },
+                  )
+                }
+              }}
+            >
+              {markInvoicePaid.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm Payment
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -418,19 +462,31 @@ export default function AdminCompanyDetailPage() {
                         <TableHead>Period</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
+                        <TableHead />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.subscription_invoices.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell>
-                            {formatDate(invoice.billing_period_start)} - {formatDate(invoice.billing_period_end)}
+                            {formatDate(invoice.billing_period_start)} – {formatDate(invoice.billing_period_end)}
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={invoice.status} />
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(invoice.amount, invoice.currency)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {invoice.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setMarkPaidInvoiceId(invoice.id); setPaymentRef('') }}
+                              >
+                                Mark Paid
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
