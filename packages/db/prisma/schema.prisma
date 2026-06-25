@@ -1,0 +1,675 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Subscription / Billing ───────────────────────────────────────────────────
+
+model SubscriptionPlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String   @unique
+  tier              String
+  price_monthly     Decimal  @db.Decimal(10, 2)
+  price_annual      Decimal  @db.Decimal(10, 2)
+  max_locations     Int
+  trial_period_days Int      @default(0)
+  feature_flags     Json     @default("{}")
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  companies             Company[]             @relation("CompanyPlan")
+  companies_scheduled   Company[]             @relation("ScheduledPlan")
+  subscription_invoices SubscriptionInvoice[]
+
+  @@map("subscription_plans")
+}
+
+model SubscriptionInvoice {
+  id                   String    @id @default(uuid()) @db.Uuid
+  company_id           String    @db.Uuid
+  plan_id              String    @db.Uuid
+  amount               Decimal   @db.Decimal(10, 2)
+  currency             String    @default("LKR")
+  status               String    @default("pending")
+  billing_period_start DateTime
+  billing_period_end   DateTime
+  paid_at              DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  company Company          @relation(fields: [company_id], references: [id])
+  plan    SubscriptionPlan @relation(fields: [plan_id], references: [id])
+
+  @@index([company_id])
+  @@map("subscription_invoices")
+}
+
+// ─── Companies (Tenants) ──────────────────────────────────────────────────────
+
+model Company {
+  id                      String    @id @default(uuid()) @db.Uuid
+  plan_id                 String    @db.Uuid
+  name                    String
+  slug                    String    @unique
+  phone                   String?
+  address                 String?
+  billing_cycle           String    @default("monthly")
+  status                  String    @default("active")
+  trial_ends_at           DateTime?
+  subscription_expires_at DateTime?
+  scheduled_plan_id       String?   @db.Uuid
+  trial_used_at           DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  plan                  SubscriptionPlan      @relation("CompanyPlan", fields: [plan_id], references: [id])
+  scheduled_plan        SubscriptionPlan?     @relation("ScheduledPlan", fields: [scheduled_plan_id], references: [id])
+  domains               CompanyDomain[]
+  branding              CompanyBranding?
+  billing               CompanyBilling?
+  members               CompanyMember[]
+  roles                 CompanyRole[]
+  locations             Location[]
+  customers             Customer[]
+  bookings              Booking[]
+  payment_configs       VenuePaymentConfig[]
+  email_configs         CompanyEmailConfig[]
+  email_templates       EmailTemplate[]
+  email_logs            EmailLog[]
+  audit_logs            AuditLog[]
+  notifications         Notification[]
+  subscription_invoices SubscriptionInvoice[]
+
+  @@index([slug])
+  @@map("companies")
+}
+
+model CompanyDomain {
+  id              String    @id @default(uuid()) @db.Uuid
+  company_id      String    @db.Uuid
+  domain          String    @unique
+  type            String
+  is_verified     Boolean   @default(false)
+  ssl_provisioned Boolean   @default(false)
+  is_active       Boolean   @default(true)
+  verified_at     DateTime?
+  created_at      DateTime  @default(now())
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@index([company_id])
+  @@map("company_domains")
+}
+
+model CompanyBranding {
+  id               String   @id @default(uuid()) @db.Uuid
+  company_id       String   @unique @db.Uuid
+  primary_color    String   @default("#3B82F6")
+  secondary_color  String   @default("#1E40AF")
+  logo_url         String?
+  favicon_url      String?
+  tagline          String?
+  meta_title       String?
+  meta_description String?
+  updated_at       DateTime @updatedAt
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_branding")
+}
+
+model CompanyBilling {
+  id                  String   @id @default(uuid()) @db.Uuid
+  company_id          String   @unique @db.Uuid
+  contact_name        String?
+  contact_email       String?
+  contact_phone       String?
+  billing_address     String?
+  tax_id              String?
+  bank_name           String?
+  bank_account_name   String?
+  bank_account_number String?
+  bank_branch         String?
+  updated_at          DateTime @updatedAt
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_billing")
+}
+
+// ─── Users & Platform RBAC ────────────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique
+  password_hash  String
+  full_name      String
+  phone          String?
+  status         String    @default("active")
+  email_verified Boolean   @default(false)
+  last_login_at  DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  platform_roles      PlatformUserRole[]
+  company_memberships CompanyMember[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model PlatformRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+
+  permissions PlatformRolePermission[]
+  user_roles  PlatformUserRole[]
+
+  @@map("platform_roles")
+}
+
+model PlatformPermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  description String?
+  created_at  DateTime @default(now())
+
+  role_permissions PlatformRolePermission[]
+
+  @@map("platform_permissions")
+}
+
+model PlatformRolePermission {
+  role_id       String @db.Uuid
+  permission_id String @db.Uuid
+
+  role       PlatformRole       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission PlatformPermission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@map("platform_role_permissions")
+}
+
+model PlatformUserRole {
+  user_id     String   @db.Uuid
+  role_id     String   @db.Uuid
+  assigned_at DateTime @default(now())
+  assigned_by String?  @db.Uuid
+
+  user User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role PlatformRole @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, role_id])
+  @@map("platform_user_roles")
+}
+
+// ─── Company RBAC ─────────────────────────────────────────────────────────────
+
+model CompanyRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  company_id  String   @db.Uuid
+  name        String
+  description String?
+  is_system   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  company     Company                 @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  permissions CompanyRolePermission[]
+  members     CompanyMember[]
+
+  @@unique([company_id, name])
+  @@map("company_roles")
+}
+
+model CompanyPermission {
+  id                String   @id @default(uuid()) @db.Uuid
+  key               String   @unique
+  description       String?
+  min_tier_required String   @default("basic")
+  created_at        DateTime @default(now())
+
+  role_permissions CompanyRolePermission[]
+
+  @@map("company_permissions")
+}
+
+model CompanyRolePermission {
+  role_id       String @db.Uuid
+  permission_id String @db.Uuid
+
+  role       CompanyRole       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission CompanyPermission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@map("company_role_permissions")
+}
+
+model CompanyMember {
+  id         String    @id @default(uuid()) @db.Uuid
+  company_id String    @db.Uuid
+  user_id    String    @db.Uuid
+  role_id    String    @db.Uuid
+  status     String    @default("active")
+  invited_at DateTime?
+  joined_at  DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  company              Company                    @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  user                 User                       @relation(fields: [user_id], references: [id])
+  role                 CompanyRole                @relation(fields: [role_id], references: [id])
+  location_assignments MemberLocationAssignment[]
+
+  @@unique([company_id, user_id])
+  @@map("company_members")
+}
+
+model MemberLocationAssignment {
+  member_id   String @db.Uuid
+  location_id String @db.Uuid
+
+  member   CompanyMember @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  location Location      @relation(fields: [location_id], references: [id], onDelete: Cascade)
+
+  @@id([member_id, location_id])
+  @@map("member_location_assignments")
+}
+
+// ─── Locations ────────────────────────────────────────────────────────────────
+
+model Location {
+  id            String   @id @default(uuid()) @db.Uuid
+  company_id    String   @db.Uuid
+  name          String
+  address       String?
+  city          String?
+  phone         String?
+  email         String?
+  timezone      String   @default("Asia/Colombo")
+  status        String   @default("active")
+  display_order Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  company            Company                    @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  operating_hours    OperatingHour[]
+  holidays           LocationHoliday[]
+  sub_venues         SubVenue[]
+  member_assignments MemberLocationAssignment[]
+
+  @@index([company_id])
+  @@map("locations")
+}
+
+model OperatingHour {
+  id          String  @id @default(uuid()) @db.Uuid
+  location_id String  @db.Uuid
+  day_of_week Int
+  open_time   String
+  close_time  String
+  is_closed   Boolean @default(false)
+
+  location Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
+
+  @@unique([location_id, day_of_week])
+  @@map("operating_hours")
+}
+
+model LocationHoliday {
+  id           String   @id @default(uuid()) @db.Uuid
+  location_id  String   @db.Uuid
+  date         DateTime @db.Date
+  label        String
+  full_day     Boolean  @default(true)
+  custom_open  String?
+  custom_close String?
+  created_at   DateTime @default(now())
+
+  location Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
+
+  @@unique([location_id, date])
+  @@map("location_holidays")
+}
+
+// ─── Sub-Venues & Slots ───────────────────────────────────────────────────────
+
+model SubVenue {
+  id            String   @id @default(uuid()) @db.Uuid
+  location_id   String   @db.Uuid
+  company_id    String   @db.Uuid
+  name          String
+  sport_type    String
+  description   String?
+  capacity      Int      @default(1)
+  amenities     Json     @default("[]")
+  status        String   @default("active")
+  display_order Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  location      Location      @relation(fields: [location_id], references: [id], onDelete: Cascade)
+  pricing_rules PricingRule[]
+  time_slots    TimeSlot[]
+
+  @@index([location_id])
+  @@index([company_id])
+  @@map("sub_venues")
+}
+
+model PricingRule {
+  id              String    @id @default(uuid()) @db.Uuid
+  sub_venue_id    String    @db.Uuid
+  company_id      String    @db.Uuid
+  name            String
+  rate_type       String    @default("flat")
+  price_per_slot  Decimal   @db.Decimal(10, 2)
+  duration_mins   Int       @default(60)
+  peak_start      String?
+  peak_end        String?
+  applicable_days Json      @default("[0,1,2,3,4,5,6]")
+  valid_from      DateTime? @db.Date
+  valid_until     DateTime? @db.Date
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  sub_venue  SubVenue   @relation(fields: [sub_venue_id], references: [id], onDelete: Cascade)
+  time_slots TimeSlot[]
+
+  @@index([sub_venue_id])
+  @@map("pricing_rules")
+}
+
+model TimeSlot {
+  id              String    @id @default(uuid()) @db.Uuid
+  sub_venue_id    String    @db.Uuid
+  company_id      String    @db.Uuid
+  pricing_rule_id String?   @db.Uuid
+  start_time      DateTime
+  end_time        DateTime
+  price           Decimal   @db.Decimal(10, 2)
+  status          String    @default("available")
+  rate_type       String    @default("flat")
+  lock_token      String?
+  locked_until    DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  sub_venue    SubVenue     @relation(fields: [sub_venue_id], references: [id], onDelete: Cascade)
+  pricing_rule PricingRule? @relation(fields: [pricing_rule_id], references: [id], onDelete: SetNull)
+  bookings     Booking[]
+
+  @@unique([sub_venue_id, start_time])
+  @@index([sub_venue_id, start_time])
+  @@index([status])
+  @@index([status, locked_until])
+  @@index([pricing_rule_id])
+  @@map("time_slots")
+}
+
+// ─── Customers & Bookings ─────────────────────────────────────────────────────
+
+model Customer {
+  id            String   @id @default(uuid()) @db.Uuid
+  company_id    String?  @db.Uuid
+  user_id       String?  @db.Uuid
+  full_name     String
+  email         String?
+  phone         String?
+  password_hash String?
+  status        String   @default("active")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  company  Company?  @relation(fields: [company_id], references: [id])
+  bookings Booking[]
+
+  @@index([company_id])
+  @@index([email])
+  @@map("customers")
+}
+
+model Booking {
+  id             String   @id @default(uuid()) @db.Uuid
+  company_id     String   @db.Uuid
+  customer_id    String   @db.Uuid
+  time_slot_id   String   @db.Uuid
+  booking_ref    String   @unique
+  total_amount   Decimal  @db.Decimal(10, 2)
+  currency       String   @default("LKR")
+  status         String   @default("pending")
+  payment_method String?
+  notes          String?
+  booked_by_type String   @default("player")
+  booked_by_id   String?  @db.Uuid
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  company              Company              @relation(fields: [company_id], references: [id])
+  customer             Customer             @relation(fields: [customer_id], references: [id])
+  time_slot            TimeSlot             @relation(fields: [time_slot_id], references: [id])
+  status_log           BookingStatusLog[]
+  payment_transactions PaymentTransaction[]
+  email_logs           EmailLog[]
+
+  @@index([company_id])
+  @@index([customer_id])
+  @@index([status])
+  @@index([time_slot_id])
+  @@index([company_id, status, created_at])
+  @@map("bookings")
+}
+
+model BookingStatusLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  booking_id  String   @db.Uuid
+  from_status String?
+  to_status   String
+  changed_by  String?  @db.Uuid
+  reason      String?
+  created_at  DateTime @default(now())
+
+  booking Booking @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+
+  @@index([booking_id])
+  @@map("booking_status_log")
+}
+
+// ─── Payments ─────────────────────────────────────────────────────────────────
+
+model PaymentTransaction {
+  id                      String    @id @default(uuid()) @db.Uuid
+  booking_id              String    @db.Uuid
+  company_id              String    @db.Uuid
+  venue_payment_config_id String?   @db.Uuid
+  gateway_slug            String    @default("payhere")
+  amount                  Decimal   @db.Decimal(10, 2)
+  currency                String    @default("LKR")
+  status                  String    @default("pending")
+  gateway_order_id        String?
+  gateway_response        Json?
+  paid_at                 DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  booking              Booking                    @relation(fields: [booking_id], references: [id])
+  venue_payment_config VenuePaymentConfig?        @relation(fields: [venue_payment_config_id], references: [id], onDelete: SetNull)
+  bank_verifications   BankTransferVerification[]
+
+  @@index([booking_id])
+  @@index([company_id])
+  @@index([status])
+  @@index([status, paid_at])
+  @@index([gateway_order_id])
+  @@index([venue_payment_config_id])
+  @@map("payment_transactions")
+}
+
+model BankTransferVerification {
+  id               String    @id @default(uuid()) @db.Uuid
+  transaction_id   String    @db.Uuid
+  company_id       String    @db.Uuid
+  slip_image_url   String
+  bank_name        String?
+  transfer_ref     String?
+  status           String    @default("pending")
+  reviewed_by      String?   @db.Uuid
+  reviewed_at      DateTime?
+  rejection_reason String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  transaction PaymentTransaction @relation(fields: [transaction_id], references: [id])
+
+  @@index([transaction_id])
+  @@map("bank_transfer_verifications")
+}
+
+// ─── Payment Gateways ─────────────────────────────────────────────────────────
+
+model GatewayDriver {
+  id         String   @id @default(uuid()) @db.Uuid
+  slug       String   @unique
+  name       String
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  venue_configs VenuePaymentConfig[]
+
+  @@map("gateway_drivers")
+}
+
+model VenuePaymentConfig {
+  id               String   @id @default(uuid()) @db.Uuid
+  company_id       String   @db.Uuid
+  gateway_id       String   @db.Uuid
+  config_encrypted String
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  company              Company              @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  gateway              GatewayDriver        @relation(fields: [gateway_id], references: [id])
+  payment_transactions PaymentTransaction[]
+
+  @@unique([company_id, gateway_id])
+  @@map("venue_payment_configs")
+}
+
+// ─── Email ────────────────────────────────────────────────────────────────────
+
+model CompanyEmailConfig {
+  id                      String   @id @default(uuid()) @db.Uuid
+  company_id              String   @unique @db.Uuid
+  mode                    String   @default("platform")
+  smtp_host               String?
+  smtp_port               Int?     @default(587)
+  smtp_user               String?
+  smtp_password_encrypted String?
+  smtp_encryption         String   @default("tls")
+  from_address            String?
+  from_name               String?
+  reply_to                String?
+  dkim_selector           String?
+  dkim_private_key_encrypted String? // AES-256-GCM encrypted PKCS#8 PEM — never exposed via API
+  dkim_public_key         String?  // SPKI PEM — safe to expose
+  spf_verified            Boolean  @default(false)
+  dkim_verified           Boolean  @default(false)
+  dmarc_verified          Boolean  @default(false)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_email_configs")
+}
+
+model EmailTemplate {
+  id           String   @id @default(uuid()) @db.Uuid
+  company_id   String?  @db.Uuid
+  template_key String
+  subject      String
+  html_body    String   @db.Text
+  text_body    String?  @db.Text
+  variables    Json     @default("[]")
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  company Company? @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@unique([company_id, template_key])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  company_id    String?   @db.Uuid
+  booking_id    String?   @db.Uuid
+  template_key  String
+  to_address    String
+  subject       String
+  status        String    @default("queued")
+  message_id    String?
+  error_message String?
+  sent_at       DateTime?
+  created_at    DateTime  @default(now())
+
+  company Company? @relation(fields: [company_id], references: [id])
+  booking Booking? @relation(fields: [booking_id], references: [id])
+
+  @@index([company_id])
+  @@index([status])
+  @@index([booking_id])
+  @@map("email_logs")
+}
+
+// ─── Audit & Notifications ────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  company_id  String?  @db.Uuid
+  actor_id    String?  @db.Uuid
+  actor_type  String?
+  action      String
+  entity_type String?
+  entity_id   String?  @db.Uuid
+  changes     Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  company Company? @relation(fields: [company_id], references: [id])
+
+  @@index([company_id])
+  @@index([actor_id])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id         String    @id @default(uuid()) @db.Uuid
+  company_id String?   @db.Uuid
+  user_id    String    @db.Uuid
+  type       String
+  title      String
+  body       String
+  data       Json?
+  is_read    Boolean   @default(false)
+  read_at    DateTime?
+  created_at DateTime  @default(now())
+
+  company Company? @relation(fields: [company_id], references: [id])
+
+  @@index([user_id, is_read])
+  @@map("notifications")
+}

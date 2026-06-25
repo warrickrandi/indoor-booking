@@ -1,0 +1,26 @@
+{
+  "name": "@sports-booking/types",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build":      "tsc -p tsconfig.json",
+    "dev":        "tsc -p tsconfig.json --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript":  "^5.7.2"
+  }
+}

@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+.next/
+.turbo/
+.cache/
+
+# Prisma generated client
+packages/db/generated/
+
+# environment files
+.env
+.env.local
+.env.*.local
+
+# editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
+
+# test coverage
+coverage/

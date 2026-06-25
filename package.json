@@ -1,0 +1,27 @@
+{
+  "name": "indoor-booking",
+  "private": true,
+  "version": "0.0.1",
+  "engines": { "node": ">=20", "pnpm": ">=9" },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build":       "turbo run build",
+    "dev":         "turbo run dev",
+    "lint":        "turbo run lint",
+    "type-check":  "turbo run type-check",
+    "db:generate": "pnpm --filter @sports-booking/db generate",
+    "db:migrate":  "pnpm --filter @sports-booking/db migrate",
+    "db:seed":     "pnpm --filter @sports-booking/db seed",
+    "db:studio":   "pnpm --filter @sports-booking/db studio"
+  },
+  "devDependencies": {
+    "turbo":      "^2.3.3",
+    "typescript": "^5.7.2",
+    "prettier":   "^3.4.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.10.1"
+    }
+  }
+}

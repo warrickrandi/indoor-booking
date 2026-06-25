@@ -1,0 +1,1 @@
+worker: pnpm --filter @sports-booking/worker start

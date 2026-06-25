@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "prisma/**", "tsconfig.json"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "generated/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["@sports-booking/db#build"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@sports-booking/db#build": {
+      "cache": true,
+      "outputs": ["generated/**"],
+      "inputs": ["prisma/schema.prisma"]
+    },
+    "@sports-booking/db#migrate": {
+      "cache": false
+    },
+    "@sports-booking/db#seed": {
+      "cache": false
+    }
+  }
+}

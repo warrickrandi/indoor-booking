@@ -1,0 +1,28 @@
+{
+  "name": "@sports-booking/email",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types":  "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build":      "tsc -p tsconfig.json",
+    "dev":        "email dev --dir src/templates",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-email/components": "^0.0.28",
+    "@react-email/render":     "^1.0.2",
+    "react":                   "^19.0.0"
+  },
+  "devDependencies": {
+    "react-email":  "^3.0.4",
+    "@types/react": "^19.0.4",
+    "@types/node":  "^22.10.7",
+    "typescript":   "^5.7.2"
+  }
+}
