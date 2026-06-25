@@ -122,7 +122,28 @@ async function main() {
   }
   console.log('  ✓ platform_roles (2 rows)')
 
-  // 4. Gateway drivers: PayHere (active), WebXPay/DirectPay (stubs, inactive)
+  // 4. Platform admin user
+  const superAdminRole = await prisma.platformRole.findUniqueOrThrow({ where: { name: 'super_admin' } })
+  const adminUser = await prisma.user.upsert({
+    where:  { email: 'platformadmin@test.com' },
+    update: {},
+    create: {
+      email:          'platformadmin@test.com',
+      // bcrypt hash of 'Test1234!' with 12 rounds
+      password_hash:  '$2a$12$3Cuyw0NOuUEwy7sqWJNKX./CZuTjstVSPUQGDIVq.zChElEa29QX.',
+      full_name:      'Platform Admin',
+      status:         'active',
+      email_verified: true,
+    },
+  })
+  await prisma.platformUserRole.upsert({
+    where:  { user_id_role_id: { user_id: adminUser.id, role_id: superAdminRole.id } },
+    update: {},
+    create: { user_id: adminUser.id, role_id: superAdminRole.id },
+  })
+  console.log('  ✓ platform_admin (platformadmin@test.com / Test1234!)')
+
+  // 5. Gateway drivers: PayHere (active), WebXPay/DirectPay (stubs, inactive)
   await prisma.gatewayDriver.upsert({
     where:  { slug: 'payhere' },
     update: { name: 'PayHere', is_active: true },
