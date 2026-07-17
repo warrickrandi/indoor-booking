@@ -19,11 +19,17 @@ interface ApiErrorBody {
 }
 
 export async function fetchPublic<T>(path: string): Promise<PublicApiResponse<T>> {
+  if (!API_URL) {
+    throw new Error(
+      'NEXT_PUBLIC_API_URL is not configured. Set it in Vercel environment variables and redeploy.',
+    )
+  }
+
   let res: Response
   try {
     res = await fetch(`${API_URL}${path}`, { cache: 'no-store' })
-  } catch {
-    throw new Error('API server is unreachable')
+  } catch (err) {
+    throw new Error(`API server is unreachable (${API_URL}): ${String(err)}`)
   }
 
   const text = await res.text()

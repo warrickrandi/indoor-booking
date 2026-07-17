@@ -28,7 +28,16 @@ export default async function VenuesPage({ searchParams }: VenuesPageProps) {
   query.set('page', String(page))
   query.set('limit', String(PAGE_LIMIT))
 
-  const { data: venues, meta } = await fetchPublic<VenueCardData[]>(`/marketplace/venues?${query.toString()}`)
+  let venues: VenueCardData[] = []
+  let meta: { page: number; limit: number; total: number } | undefined
+
+  try {
+    const result = await fetchPublic<VenueCardData[]>(`/marketplace/venues?${query.toString()}`)
+    venues = result.data
+    meta = result.meta
+  } catch {
+    // API unreachable or error — render empty listing rather than crash
+  }
 
   const totalPages = meta ? Math.max(1, Math.ceil(meta.total / meta.limit)) : 1
   const dateSuffix = params.date ? `?date=${params.date}` : ''
