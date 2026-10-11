@@ -1,47 +1,94 @@
 services:
   - type: web
     name: indoor-booking-api
-    env: node
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sports-booking/api build
-    startCommand: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma && pnpm --filter @sports-booking/api start
+    runtime: node
+    region: singapore
+    plan: free
+    autoDeploy: true
+    # NODE_ENV=production makes pnpm skip devDependencies (@types/node, typescript, ...),
+    # so install with --prod=false. Workspace packages resolve via dist/, so build them first.
+    buildCommand: >-
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @sports-booking/types build &&
+      pnpm --filter @sports-booking/email build &&
+      pnpm --filter @sports-booking/api build &&
+      pnpm --filter @sports-booking/worker build
+    # Free plan has no background workers, so run the worker alongside the API in the same service.
+    # Move it to its own `type: worker` service (paid) when you outgrow this.
+    startCommand: >-
+      npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma &&
+      (pnpm --filter @sports-booking/worker start &) &&
+      pnpm --filter @sports-booking/api start
+    healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
         fromDatabase:
           name: indoor-booking-postgres
           property: connectionString
+      # Upstash Redis: paste the rediss:// URL (TLS) when the blueprint is applied
       - key: REDIS_URL
-        fromDatabase:
-          name: indoor-booking-redis
-          property: connectionString
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: "3001"
+        sync: false
       - key: HOST
         value: "0.0.0.0"
-    autoDeploy: true
-    plan: free
-    region: singapore
+      # Secrets / per-deploy values: Render prompts for these when the blueprint is applied
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: PLATFORM_DOMAIN
+        sync: false
+      - key: VENUE_JWT_SECRET
+        generateValue: true
+      - key: PLAYER_JWT_SECRET
+        generateValue: true
+      - key: PLATFORM_JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: PAYHERE_MERCHANT_ID
+        sync: false
+      - key: PAYHERE_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_ACCESS_KEY
+        sync: false
+      - key: STORAGE_SECRET_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
 
-  - type: worker
-    name: indoor-booking-worker
-    env: node
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sports-booking/worker build
-    startCommand: pnpm --filter @sports-booking/worker start
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: indoor-booking-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromDatabase:
-          name: indoor-booking-redis
-          property: connectionString
-      - key: NODE_ENV
-        value: production
-    autoDeploy: true
-    plan: free
-    region: singapore
+  # Background workers are not available on Render's free plan.
+  # To enable, uncomment and set plan: starter (paid), and copy the same env vars
+  # the worker needs (DATABASE_URL, REDIS_URL, SMTP_*, ...).
+  #
+  # - type: worker
+  #   name: indoor-booking-worker
+  #   runtime: node
+  #   region: singapore
+  #   plan: starter
+  #   autoDeploy: true
+  #   buildCommand: >-
+  #     pnpm install --frozen-lockfile --prod=false &&
+  #     pnpm --filter @sports-booking/db build &&
+  #     pnpm --filter @sports-booking/types build &&
+  #     pnpm --filter @sports-booking/email build &&
+  #     pnpm --filter @sports-booking/worker build
+  #   startCommand: pnpm --filter @sports-booking/worker start
 
 databases:
   - name: indoor-booking-postgres
