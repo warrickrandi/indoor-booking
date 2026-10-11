@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react'
 import { usePlayerAuth } from '@/hooks/usePlayerAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthShell } from '@/components/marketplace/AuthShell'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 export default function PlayerRegisterPage() {
@@ -31,14 +31,19 @@ export default function PlayerRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Create your account</CardTitle>
-          <CardDescription>Book and manage your slots in one place</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
+    <AuthShell
+      title="Create your account"
+      subtitle="Book and manage your slots in one place"
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link href="/player/login" className="font-semibold text-primary hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
@@ -92,20 +97,12 @@ export default function PlayerRegisterPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={register.isPending}>
+              <Button type="submit" size="lg" className="w-full rounded-full" disabled={register.isPending}>
                 {register.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create account
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/player/login" className="font-medium text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthShell>
   )
 }

@@ -1,5 +1,5 @@
-import { LayoutClient } from './layout-client'
+import { SiteShell } from '@/components/marketplace/SiteShell'
 
 export default function MarketplaceLayout({ children }: { children: React.ReactNode }) {
-  return <LayoutClient>{children}</LayoutClient>
+  return <SiteShell>{children}</SiteShell>
 }

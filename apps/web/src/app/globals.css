@@ -44,3 +44,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Customer-facing "sporty" theme — scoped so the dashboard and admin panel keep the default look. */
+@layer base {
+  .theme-sport {
+    --primary: 160 84% 30%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 160 84% 30%;
+    --radius: 0.75rem;
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+  .theme-sport h1,
+  .theme-sport h2,
+  .theme-sport h3 {
+    font-family: var(--font-display), system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .court-lines {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+}

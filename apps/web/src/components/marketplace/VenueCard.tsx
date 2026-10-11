@@ -1,9 +1,8 @@
 import Link from 'next/link'
-import { Building2, MapPin } from 'lucide-react'
+import { ArrowRight, MapPin } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { SportBadge } from './SportBadge'
+import { VenueCover } from './VenueCover'
 
 export interface VenueCardData {
   slug: string
@@ -22,28 +21,26 @@ interface VenueCardProps {
 
 export function VenueCard({ venue, href }: VenueCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <CardHeader className="flex-row items-center gap-3 space-y-0">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md text-white"
-          style={{ backgroundColor: venue.primary_color }}
-        >
-          {venue.logo_url ? (
-            <img src={venue.logo_url} alt={venue.name} className="h-full w-full object-cover" />
-          ) : (
-            <Building2 className="h-6 w-6" />
-          )}
+    <Link
+      href={href ?? `/venues/${venue.slug}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <VenueCover
+        name={venue.name}
+        primaryColor={venue.primary_color}
+        logoUrl={venue.logo_url}
+        sportTypes={venue.sport_types}
+        className="h-36"
+      />
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div>
+          <h3 className="truncate text-lg font-bold">{venue.name}</h3>
+          {venue.tagline && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{venue.tagline}</p>}
         </div>
-        <div className="min-w-0">
-          <CardTitle className="truncate text-base">{venue.name}</CardTitle>
-          {venue.tagline && <p className="truncate text-sm text-muted-foreground">{venue.tagline}</p>}
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-3">
         {venue.cities.length > 0 && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {venue.cities.join(', ')}
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 shrink-0" />
+            <span className="truncate">{venue.cities.join(', ')}</span>
           </div>
         )}
         <div className="flex flex-wrap gap-1.5">
@@ -51,12 +48,11 @@ export function VenueCard({ venue, href }: VenueCardProps) {
             <SportBadge key={sport} sportType={sport} />
           ))}
         </div>
-      </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
-          <Link href={href ?? `/venues/${venue.slug}`}>View Venue</Link>
-        </Button>
-      </CardFooter>
-    </Card>
+        <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-sm font-semibold text-primary">
+          View &amp; book
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </span>
+      </div>
+    </Link>
   )
 }

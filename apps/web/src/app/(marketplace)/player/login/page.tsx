@@ -11,8 +11,8 @@ import { Loader2 } from 'lucide-react'
 import { usePlayerAuth } from '@/hooks/usePlayerAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { AuthShell } from '@/components/marketplace/AuthShell'
 import { LoadingPanel } from '@/components/shared/LoadingSpinner'
 
 export default function PlayerLoginPage() {
@@ -42,14 +42,19 @@ function PlayerLoginForm() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Sign in to manage your bookings</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to manage your bookings"
+      footer={
+        <>
+          New here?{' '}
+          <Link href="/player/register" className="font-semibold text-primary hover:underline">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
@@ -77,20 +82,12 @@ function PlayerLoginForm() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={login.isPending}>
+              <Button type="submit" size="lg" className="w-full rounded-full" disabled={login.isPending}>
                 {login.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Sign in
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            New here?{' '}
-            <Link href="/player/register" className="font-medium text-primary hover:underline">
-              Create an account
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthShell>
   )
 }

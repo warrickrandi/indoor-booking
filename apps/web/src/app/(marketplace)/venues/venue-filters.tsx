@@ -1,26 +1,20 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { SPORT_TYPES } from '@sports-booking/types'
+import { CalendarDays, MapPin } from 'lucide-react'
 
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-const SPORT_LABELS: Record<string, string> = {
-  futsal: 'Futsal',
-  badminton: 'Badminton',
-  cricket: 'Cricket',
-  playhouse: 'Playhouse',
-  other: 'Other',
-}
+import { SPORTS } from '@/lib/sports'
+import { cn, todayDateString } from '@/lib/utils'
 
 interface VenueFiltersProps {
   sportType?: string
   city?: string
   date?: string
 }
+
+const INPUT_WRAP =
+  'flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white focus-within:border-volt'
+const INPUT_CLASS = 'w-full bg-transparent text-white placeholder:text-white/50 focus:outline-none [color-scheme:dark]'
 
 export function VenueFilters({ sportType, city, date }: VenueFiltersProps) {
   const router = useRouter()
@@ -30,7 +24,7 @@ export function VenueFilters({ sportType, city, date }: VenueFiltersProps) {
     const next = { sportType, city, date, ...updates }
     const params = new URLSearchParams()
 
-    if (next.sportType && next.sportType !== 'all') params.set('sport_type', next.sportType)
+    if (next.sportType) params.set('sport_type', next.sportType)
     if (next.city) params.set('city', next.city)
     if (next.date) params.set('date', next.date)
 
@@ -38,36 +32,44 @@ export function VenueFilters({ sportType, city, date }: VenueFiltersProps) {
     router.push(qs ? `${pathname}?${qs}` : pathname)
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Filters</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1.5">
-          <Label>Sport</Label>
-          <Select value={sportType ?? 'all'} onValueChange={(value) => navigate({ sportType: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sports</SelectItem>
-              {SPORT_TYPES.map((sport) => (
-                <SelectItem key={sport} value={sport}>
-                  {SPORT_LABELS[sport] ?? sport}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+  const chips = [{ key: '', label: 'All sports' }, ...SPORTS.map((s) => ({ key: s.key, label: s.label }))]
 
-        <div className="space-y-1.5">
-          <Label htmlFor="venue-city">City</Label>
-          <Input
-            id="venue-city"
-            placeholder="e.g. Colombo"
+  return (
+    <div className="space-y-4">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        {chips.map((chip) => {
+          const active = (sportType ?? '') === chip.key
+          return (
+            <button
+              key={chip.key || 'all'}
+              type="button"
+              onClick={() => navigate({ sportType: chip.key || undefined })}
+              aria-pressed={active}
+              className={cn(
+                'shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+                active
+                  ? 'border-volt bg-volt text-ink'
+                  : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white',
+              )}
+            >
+              {chip.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+        <label className={INPUT_WRAP}>
+          <MapPin className="h-4 w-4 shrink-0 text-volt" />
+          <input
+            aria-label="City"
+            placeholder="City, e.g. Colombo"
             defaultValue={city ?? ''}
-            onBlur={(e) => navigate({ city: e.target.value.trim() || undefined })}
+            className={INPUT_CLASS}
+            onBlur={(e) => {
+              const value = e.target.value.trim()
+              if (value !== (city ?? '')) navigate({ city: value || undefined })
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
@@ -75,18 +77,19 @@ export function VenueFilters({ sportType, city, date }: VenueFiltersProps) {
               }
             }}
           />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="venue-date">Date</Label>
-          <Input
-            id="venue-date"
+        </label>
+        <label className={INPUT_WRAP}>
+          <CalendarDays className="h-4 w-4 shrink-0 text-volt" />
+          <input
+            aria-label="Date"
             type="date"
+            min={todayDateString()}
             value={date ?? ''}
             onChange={(e) => navigate({ date: e.target.value || undefined })}
+            className={INPUT_CLASS}
           />
-        </div>
-      </CardContent>
-    </Card>
+        </label>
+      </div>
+    </div>
   )
 }

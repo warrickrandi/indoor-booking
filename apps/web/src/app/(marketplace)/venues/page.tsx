@@ -45,75 +45,83 @@ export default async function VenuesPage({ searchParams }: VenuesPageProps) {
   const buildPageLink = (targetPage: number) => {
     const linkParams = new URLSearchParams(query)
     linkParams.set('page', String(targetPage))
+    if (params.date) linkParams.set('date', params.date)
     return `/venues?${linkParams.toString()}`
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Find a venue</h1>
-        <p className="text-muted-foreground">Browse futsal, badminton, cricket and playhouse venues near you</p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-[240px_1fr]">
-        <aside>
+    <>
+      <section className="relative isolate overflow-hidden bg-ink text-white">
+        <div className="court-lines absolute inset-0 -z-10 opacity-70" />
+        <div className="absolute -right-20 -top-20 -z-10 h-72 w-72 rounded-full bg-volt/20 blur-3xl" />
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <h1 className="text-4xl font-extrabold sm:text-5xl">Find a venue</h1>
+          <p className="mt-2 mb-8 max-w-xl text-white/70">
+            Futsal, badminton, cricket and playhouse venues. Filter, pick a date and book.
+          </p>
           <VenueFilters sportType={params.sport_type} city={params.city} date={params.date} />
-        </aside>
+        </div>
+      </section>
 
-        <div>
-          {venues.length === 0 ? (
-            <EmptyState
-              icon={SearchX}
-              title="No venues found"
-              description="Try adjusting your filters to find more venues."
-            />
-          ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {venues.map((venue) => (
-                  <VenueCard key={venue.slug} venue={venue} href={`/venues/${venue.slug}${dateSuffix}`} />
-                ))}
-              </div>
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {meta && venues.length > 0 && (
+          <p className="mb-6 text-sm text-muted-foreground">
+            {meta.total} {meta.total === 1 ? 'venue' : 'venues'} found
+          </p>
+        )}
 
-              {meta && totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Page {meta.page} of {totalPages} &middot; {meta.total} venues
-                  </p>
-                  <div className="flex gap-2">
-                    {page > 1 ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={buildPageLink(page - 1)}>
-                          <ChevronLeft className="h-4 w-4" />
-                          Previous
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled>
+        {venues.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title="No venues found"
+            description="Try a different sport or city, or clear your filters."
+          />
+        ) : (
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {venues.map((venue) => (
+                <VenueCard key={venue.slug} venue={venue} href={`/venues/${venue.slug}${dateSuffix}`} />
+              ))}
+            </div>
+
+            {meta && totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Page {meta.page} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  {page > 1 ? (
+                    <Button variant="outline" asChild>
+                      <Link href={buildPageLink(page - 1)}>
                         <ChevronLeft className="h-4 w-4" />
                         Previous
-                      </Button>
-                    )}
-                    {page < totalPages ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={buildPageLink(page + 1)}>
-                          Next
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled>
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                  )}
+                  {page < totalPages ? (
+                    <Button variant="outline" asChild>
+                      <Link href={buildPageLink(page + 1)}>
                         Next
                         <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </>
   )
 }
