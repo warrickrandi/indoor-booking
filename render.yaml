@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: indoor-booking-api
+    env: node
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sports-booking/api build
+    startCommand: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma && pnpm --filter @sports-booking/api start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indoor-booking-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: indoor-booking-redis
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: HOST
+        value: "0.0.0.0"
+    autoDeploy: true
+    plan: free
+    region: singapore
+
+  - type: worker
+    name: indoor-booking-worker
+    env: node
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sports-booking/worker build
+    startCommand: pnpm --filter @sports-booking/worker start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indoor-booking-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: indoor-booking-redis
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
+    plan: free
+    region: singapore
+
+databases:
+  - name: indoor-booking-postgres
+    plan: free
+    region: singapore
+
+  - name: indoor-booking-redis
+    plan: free
+    region: singapore
