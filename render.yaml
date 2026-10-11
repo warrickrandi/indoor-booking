@@ -19,7 +19,7 @@ services:
       npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma &&
       (pnpm --filter @sports-booking/worker start &) &&
       pnpm --filter @sports-booking/api start
-    healthCheckPath: /health
+    healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
