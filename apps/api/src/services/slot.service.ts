@@ -23,6 +23,7 @@ import {
   addDays,
   daysBetween,
 } from '../lib/datetime.js'
+import { getPaymentOptions, type PaymentOptions } from './payment-options.service.js'
 
 const LOCK_TTL_SECONDS        = 600
 const MAX_GENERATE_RANGE_DAYS = 90
@@ -41,6 +42,7 @@ function serializeSlot(slot: TimeSlot, statusOverride?: string) {
 }
 
 function serializeSlotDetail(
+  paymentOptions: PaymentOptions,
   slot: TimeSlot & {
     sub_venue: SubVenue & {
       location: Location & {
@@ -56,6 +58,7 @@ function serializeSlotDetail(
 
   return {
     ...serializeSlot(slot, statusOverride),
+    payment_options: paymentOptions,
     sub_venue: {
       name:       sub_venue.name,
       sport_type: sub_venue.sport_type,
@@ -111,13 +114,19 @@ async function loadSubVenueWithSchedule(subVenueId: string) {
 
 // ─── Slot generation ────────────────────────────────────────────────────────
 
-export async function generateSlotsForDate(subVenueId: string, date: string, overwrite = false) {
+export async function generateSlotsForDate(
+  subVenueId: string,
+  date: string,
+  overwrite = false,
+  onSkip?: (reason: string) => void,
+) {
   const subVenue = await loadSubVenueWithSchedule(subVenueId)
   const { location } = subVenue
 
   const dayOfWeek = getDayOfWeek(date)
   const operatingHour = location.operating_hours.find((h) => h.day_of_week === dayOfWeek)
   if (!operatingHour || operatingHour.is_closed) {
+    onSkip?.(operatingHour ? 'Location is closed on this weekday' : 'No opening hours set for this weekday (Location → Hours tab)')
     return []
   }
 
@@ -127,6 +136,7 @@ export async function generateSlotsForDate(subVenueId: string, date: string, ove
   const holiday = location.holidays.find((h) => h.date.toISOString().slice(0, 10) === date)
   if (holiday) {
     if (holiday.full_day) {
+      onSkip?.('Location holiday')
       return []
     }
     if (holiday.custom_open && holiday.custom_close) {
@@ -166,21 +176,31 @@ export async function generateSlotsForDate(subVenueId: string, date: string, ove
     const end = start + slotDurationMins
     const startTimeStr = minutesToTimeString(start)
 
-    const peakRule = dayRules.find(
-      (r) =>
-        r.rate_type === 'peak' &&
-        r.peak_start &&
-        r.peak_end &&
-        startTimeStr >= r.peak_start &&
-        startTimeStr < r.peak_end,
-    )
-    const offPeakRule = dayRules.find((r) => r.rate_type === 'off_peak')
-    const flatRule    = dayRules.find((r) => r.rate_type === 'flat' || r.rate_type === 'weekend')
-    const rule = peakRule ?? offPeakRule ?? flatRule
+    // A rule with a time band applies only when the slot starts inside it (peak bands win over
+    // other bands). Rules without a band are the fallback for the rest of the day.
+    const inBand = (r: PricingRule) =>
+      Boolean(r.peak_start && r.peak_end && startTimeStr >= r.peak_start && startTimeStr < r.peak_end)
+    const bandedRule =
+      dayRules.find((r) => r.rate_type === 'peak' && inBand(r)) ??
+      dayRules.find((r) => r.rate_type !== 'peak' && inBand(r))
+    const hasNoBand   = (r: PricingRule) => !r.peak_start || !r.peak_end
+    const offPeakRule = dayRules.find((r) => r.rate_type === 'off_peak' && hasNoBand(r)) ??
+                        dayRules.find((r) => r.rate_type === 'off_peak')
+    const flatRule    = dayRules.find((r) => (r.rate_type === 'flat' || r.rate_type === 'weekend') && hasNoBand(r))
+    const rule = bandedRule ?? offPeakRule ?? flatRule
 
     if (rule) {
       intervals.push({ startMinutes: start, endMinutes: end, rule })
     }
+  }
+
+  if (intervals.length === 0) {
+    onSkip?.(
+      closeMinutes - openMinutes < slotDurationMins
+        ? 'Opening hours are shorter than one slot'
+        : 'No pricing rule covers the opening hours (add an Off-Peak or Flat rule without times)',
+    )
+    return []
   }
 
   const dayStartUtc = localDateTimeToUtc(date, 0)
@@ -226,7 +246,9 @@ export async function generateSlotsForDate(subVenueId: string, date: string, ove
       locked_until:    null,
     }))
 
-  if (rows.length > 0) {
+  if (rows.length === 0) {
+    onSkip?.('Slots already exist for this day (tick Overwrite to regenerate)')
+  } else {
     await prisma.timeSlot.createMany({ data: rows, skipDuplicates: true })
   }
 
@@ -252,7 +274,7 @@ export async function generateSlotsForDateRange(
   }
 
   const today = getTodayLocalDateString()
-  const dates: { date: string; generated: number }[] = []
+  const dates: { date: string; generated: number; reason?: string }[] = []
   let generated = 0
   let skipped   = 0
 
@@ -263,12 +285,15 @@ export async function generateSlotsForDateRange(
     }
 
     try {
-      const slots = await generateSlotsForDate(subVenueId, date, overwrite)
-      dates.push({ date, generated: slots.length })
+      let reason: string | undefined
+      const slots = await generateSlotsForDate(subVenueId, date, overwrite, (r) => {
+        reason = r
+      })
+      dates.push({ date, generated: slots.length, ...(slots.length === 0 && reason ? { reason } : {}) })
       generated += slots.length
     } catch (err) {
       if (err instanceof ValidationError) {
-        dates.push({ date, generated: 0 })
+        dates.push({ date, generated: 0, reason: err.message })
       } else {
         throw err
       }
@@ -358,12 +383,14 @@ export async function getSlotDetail(slotId: string) {
     throw new NotFoundError('Slot')
   }
 
+  const paymentOptions = await getPaymentOptions(slot.company_id)
+
   if (slot.status === 'available') {
     const isLocked = (await redis.exists(`slot:lock:${slotId}`)) === 1
-    return serializeSlotDetail(slot, isLocked ? 'locked' : 'available')
+    return serializeSlotDetail(paymentOptions, slot, isLocked ? 'locked' : 'available')
   }
 
-  return serializeSlotDetail(slot)
+  return serializeSlotDetail(paymentOptions, slot)
 }
 
 export async function getSlotCalendar(

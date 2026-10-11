@@ -43,10 +43,9 @@ export const CreatePricingRuleBodySchema = z
   })
   .refine(
     (data) =>
-      (data.rate_type !== 'peak' && data.rate_type !== 'off_peak') ||
-      (data.peak_start !== undefined && data.peak_end !== undefined),
+      data.rate_type !== 'peak' || (data.peak_start !== undefined && data.peak_end !== undefined),
     {
-      message: 'peak_start and peak_end are required when rate_type is peak or off_peak',
+      message: 'peak_start and peak_end are required when rate_type is peak',
       path:    ['peak_start'],
     },
   )

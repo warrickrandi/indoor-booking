@@ -30,7 +30,7 @@ export default function NewLocationPage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['locations'] })
       toast.success('Location created')
-      router.push(`/locations/${res.data.id}`)
+      router.push(`/locations/${res.data.id}?tab=hours`)
     },
     onError: showApiErrorToast,
   })

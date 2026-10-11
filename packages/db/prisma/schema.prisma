@@ -73,6 +73,7 @@ model Company {
   domains               CompanyDomain[]
   branding              CompanyBranding?
   billing               CompanyBilling?
+  media                 VenueMedia[]
   members               CompanyMember[]
   roles                 CompanyRole[]
   locations             Location[]
@@ -672,4 +673,21 @@ model Notification {
 
   @@index([user_id, is_read])
   @@map("notifications")
+}
+
+model VenueMedia {
+  id            String   @id @default(uuid()) @db.Uuid
+  company_id    String   @db.Uuid
+  type          String   // 'image' | 'video'
+  url           String   // public image URL, or the original YouTube/Vimeo link
+  storage_key   String?  // R2 object key (images only), used to delete the file
+  caption       String?
+  is_cover      Boolean  @default(false)
+  display_order Int      @default(0)
+  created_at    DateTime @default(now())
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@index([company_id, display_order])
+  @@map("venue_media")
 }

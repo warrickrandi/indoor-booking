@@ -36,11 +36,17 @@ const PAYMENT_METHODS = [
     label: 'Bank transfer',
     description: "Transfer to the venue's bank account and upload your payment slip.",
   },
+  {
+    value: 'pay_at_venue' as const,
+    label: 'Pay at the venue',
+    description: 'Reserve now and pay when you arrive. Your booking is confirmed straight away.',
+  },
 ]
 
 type MarketplacePaymentMethod = (typeof PAYMENT_METHODS)[number]['value']
 
 export interface SlotDetail {
+  payment_options: Record<MarketplacePaymentMethod, boolean>
   slotId: string
   sub_venue_id: string
   start_time: string
@@ -110,7 +116,10 @@ export function BookingWizard({ slot }: BookingWizardProps) {
   const [expired, setExpired] = useState(false)
   const [authExpired, setAuthExpired] = useState(false)
   const [conflictEmail, setConflictEmail] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<MarketplacePaymentMethod>('online')
+  const availableMethods = PAYMENT_METHODS.filter((method) => slot.payment_options[method.value])
+  const [paymentMethod, setPaymentMethod] = useState<MarketplacePaymentMethod>(
+    availableMethods[0]?.value ?? 'pay_at_venue',
+  )
   const [notes, setNotes] = useState('')
   const [checkout, setCheckout] = useState<InitiatePaymentResult | null>(null)
 
@@ -340,7 +349,7 @@ export function BookingWizard({ slot }: BookingWizardProps) {
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Payment method</p>
-              {PAYMENT_METHODS.map((method) => (
+              {availableMethods.map((method) => (
                 <label
                   key={method.value}
                   className={cn(

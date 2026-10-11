@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 
 import { useLocation } from '@/hooks/useLocations'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -13,9 +13,12 @@ import { HoursTab } from './_components/HoursTab'
 import { HolidaysTab } from './_components/HolidaysTab'
 import { SubVenuesTab } from './_components/SubVenuesTab'
 
+const LOCATION_TABS = ['details', 'hours', 'holidays', 'sub-venues']
+
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>()
   const location = useLocation(locationId)
+  const tab = useSearchParams().get('tab')
 
   if (location.isLoading) {
     return <LoadingPanel />
@@ -32,7 +35,7 @@ export default function LocationDetailPage() {
         description={`${location.data.address}, ${location.data.city}`}
         action={<StatusBadge status={location.data.status} />}
       />
-      <Tabs defaultValue="details">
+      <Tabs defaultValue={tab && LOCATION_TABS.includes(tab) ? tab : 'details'}>
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>

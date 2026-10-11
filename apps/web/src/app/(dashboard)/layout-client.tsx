@@ -19,6 +19,7 @@ import {
   BarChart3,
   Globe,
   Receipt,
+  Images,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Slots', href: '/slots', icon: CalendarClock, permission: 'slots.read' },
   { label: 'Staff', href: '/settings/staff', icon: Users, permission: 'staff.invite' },
   { label: 'Payments', href: '/settings/gateway', icon: CreditCard, permission: 'payments.gateway_config' },
+  { label: 'Media', href: '/settings/media', icon: Images, permission: 'company.branding' },
   { label: 'Email', href: '/settings/email', icon: Mail, permission: 'company.branding' },
   { label: 'Domains', href: '/settings/domains', icon: Globe, permission: 'company.branding' },
   { label: 'Billing', href: '/settings/billing', icon: Receipt, permission: 'company.branding' },

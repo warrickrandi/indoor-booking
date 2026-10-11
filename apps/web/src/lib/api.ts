@@ -117,6 +117,10 @@ export function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   return apiFetch<T>(path, { method: 'PUT', body: body !== undefined ? JSON.stringify(body) : undefined })
 }
 
+export function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+  return apiFetch<T>(path, { method: 'PATCH', body: body !== undefined ? JSON.stringify(body) : undefined })
+}
+
 export function del<T>(path: string): Promise<ApiResponse<T>> {
   return apiFetch<T>(path, { method: 'DELETE' })
 }

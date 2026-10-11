@@ -14,7 +14,7 @@ import { useLocations } from '@/hooks/useLocations'
 import { useSubVenues } from '@/hooks/useSubVenues'
 import { useSlots } from '@/hooks/useSlots'
 import { post, showApiErrorToast } from '@/lib/api'
-import { formatDate, todayDateString } from '@/lib/utils'
+import { formatDate, formatTime, todayDateString } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -267,7 +267,7 @@ export default function NewBookingPage() {
             <div className="rounded-md border bg-muted/50 p-3 text-sm">
               <p className="font-medium">{formatDate(`${date}T00:00:00`)}</p>
               <p className="text-muted-foreground">
-                {lock.slot.start_time.slice(11, 16)} - {lock.slot.end_time.slice(11, 16)} &middot; Rs{' '}
+                {formatTime(lock.slot.start_time)} - {formatTime(lock.slot.end_time)} &middot; Rs{' '}
                 {lock.slot.price.toFixed(0)}
               </p>
             </div>

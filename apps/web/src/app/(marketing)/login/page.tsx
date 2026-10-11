@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthShell } from '@/components/marketplace/AuthShell'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 export default function LoginPage() {
@@ -25,14 +25,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Sign in to your venue dashboard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
+    <AuthShell
+      variant="owner"
+      title="Venue login"
+      subtitle="Sign in to your venue dashboard"
+      footer={
+        <>
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="font-semibold text-primary hover:underline">
+            Register your venue
+          </Link>
+        </>
+      }
+    >
+      <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
@@ -60,20 +66,12 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={login.isPending}>
+              <Button type="submit" size="lg" className="w-full rounded-full" disabled={login.isPending}>
                 {login.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Sign in
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Register your venue
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthShell>
   )
 }

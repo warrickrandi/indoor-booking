@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 
 import { useSubVenue } from '@/hooks/useSubVenues'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -12,9 +12,12 @@ import { DetailsTab } from './_components/DetailsTab'
 import { PricingTab } from './_components/PricingTab'
 import { GenerateSlotsTab } from './_components/GenerateSlotsTab'
 
+const SUB_VENUE_TABS = ['details', 'pricing', 'generate-slots']
+
 export default function SubVenueDetailPage() {
   const { locationId, subVenueId } = useParams<{ locationId: string; subVenueId: string }>()
   const subVenue = useSubVenue(locationId, subVenueId)
+  const tab = useSearchParams().get('tab')
 
   if (subVenue.isLoading) {
     return <LoadingPanel />
@@ -31,7 +34,7 @@ export default function SubVenueDetailPage() {
         description={`${subVenue.data.sport_type} sub-venue`}
         action={<StatusBadge status={subVenue.data.status} />}
       />
-      <Tabs defaultValue="details">
+      <Tabs defaultValue={tab && SUB_VENUE_TABS.includes(tab) ? tab : 'details'}>
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>

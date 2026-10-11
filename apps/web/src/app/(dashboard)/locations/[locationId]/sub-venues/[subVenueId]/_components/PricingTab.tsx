@@ -54,8 +54,8 @@ const PricingRuleFormSchema = z
   })
   .refine(
     (data) =>
-      (data.rate_type !== 'peak' && data.rate_type !== 'off_peak') || (!!data.peak_start && !!data.peak_end),
-    { message: 'Peak start and end times are required for this rate type', path: ['peak_start'] },
+      data.rate_type !== 'peak' || (!!data.peak_start && !!data.peak_end),
+    { message: 'Start and end times are required for a peak rate', path: ['peak_start'] },
   )
 
 type PricingRuleFormValues = z.infer<typeof PricingRuleFormSchema>
@@ -100,7 +100,7 @@ function PricingRuleDialog({ locationId, subVenueId, rule, trigger }: PricingRul
   })
 
   const rateType = useWatch({ control: form.control, name: 'rate_type' })
-  const showPeakFields = rateType === 'peak' || rateType === 'off_peak'
+  const showPeakFields = true // every rate type can be limited to a time of day
 
   const saveRule = useMutation({
     mutationFn: (values: CreatePricingRuleBody) =>
@@ -227,7 +227,7 @@ function PricingRuleDialog({ locationId, subVenueId, rule, trigger }: PricingRul
                   name="peak_start"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Peak Start</FormLabel>
+                      <FormLabel>{rateType === 'peak' ? 'From time' : 'From time (optional)'}</FormLabel>
                       <FormControl>
                         <Input
                           type="time"
@@ -244,7 +244,7 @@ function PricingRuleDialog({ locationId, subVenueId, rule, trigger }: PricingRul
                   name="peak_end"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Peak End</FormLabel>
+                      <FormLabel>{rateType === 'peak' ? 'To time' : 'To time (optional)'}</FormLabel>
                       <FormControl>
                         <Input
                           type="time"
@@ -396,8 +396,7 @@ export function PricingTab({ locationId, subVenue }: PricingTabProps) {
                 <TableRow key={rule.id}>
                   <TableCell className="font-medium">
                     {rule.rule_name}
-                    {(rule.rate_type === 'peak' || rule.rate_type === 'off_peak') &&
-                      rule.peak_start &&
+                    {rule.peak_start &&
                       rule.peak_end && (
                         <span className="block text-xs text-muted-foreground">
                           {rule.peak_start} - {rule.peak_end}

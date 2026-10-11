@@ -15,6 +15,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { addEmailJob } from '../jobs/email.job.js'
 import { localDateTimeToUtc, addDays, formatLocalDate, formatLocalTime, getDurationMinutes } from '../lib/datetime.js'
 import { resolveGatewayConfig } from './payment.service.js'
+import { getPaymentOptions } from './payment-options.service.js'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   online:        'Online payment',
@@ -251,6 +252,11 @@ export async function createBooking(actor: Actor, data: CreateBookingBody) {
       slot.locked_until < now
     ) {
       throw new ConflictError('Slot lock expired or invalid')
+    }
+
+    const paymentOptions = await getPaymentOptions(slot.company_id)
+    if (!paymentOptions[data.payment_method]) {
+      throw new ValidationError(`This venue does not accept ${PAYMENT_METHOD_LABELS[data.payment_method]?.toLowerCase() ?? data.payment_method}`)
     }
 
     const isPayLater = data.payment_method === 'online' || data.payment_method === 'bank_transfer'

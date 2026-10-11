@@ -12,7 +12,11 @@ export async function middleware(req: NextRequest) {
   }
 
   const host = req.headers.get('host') ?? ''
-  const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? 'localhost:3000'
+  const PLATFORM_DOMAIN = (process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? 'localhost:3000')
+    .trim()
+    .replace(/^[a-z]+:\/\//i, '')
+    .replace(/\/+$/, '')
+    .toLowerCase()
 
   if (host === PLATFORM_DOMAIN || host.startsWith('localhost')) {
     return NextResponse.next()

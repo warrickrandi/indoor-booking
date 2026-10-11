@@ -20,6 +20,7 @@ import { register as registerSlotRoutes } from './routes/slots.js'
 import { register as registerBookingRoutes } from './routes/bookings.js'
 import { register as registerPaymentRoutes } from './routes/payments.js'
 import { register as registerUploadRoutes } from './routes/uploads.js'
+import { register as registerMediaRoutes } from './routes/media.js'
 import { register as registerAdminRoutes } from './routes/admin.js'
 import { register as registerReportsRoutes } from './routes/reports.js'
 import { register as registerBillingRoutes } from './routes/billing.js'
@@ -108,6 +109,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(registerBookingRoutes, { prefix: '/api/v1/bookings' })
   await fastify.register(registerPaymentRoutes, { prefix: '/api/v1/payments' })
   await fastify.register(registerUploadRoutes, { prefix: '/api/v1/uploads' })
+  await fastify.register(registerMediaRoutes, { prefix: '/api/v1/media' })
   await fastify.register(registerAdminRoutes, { prefix: '/api/v1/admin' })
   await fastify.register(registerReportsRoutes, { prefix: '/api/v1/reports' })
   await fastify.register(registerBillingRoutes, { prefix: '/api/v1/billing' })

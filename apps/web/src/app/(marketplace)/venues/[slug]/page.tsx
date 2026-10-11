@@ -4,6 +4,8 @@ import { Building2, MapPin } from 'lucide-react'
 import { fetchPublic } from '@/lib/server-api'
 import { hexToHslComponents } from '@/lib/utils'
 import { SportBadge } from '@/components/marketplace/SportBadge'
+import { PermanentBookingCard } from '@/components/marketplace/PermanentBookingCard'
+import { VenueGallery, type GalleryMedia } from '@/components/marketplace/VenueGallery'
 import { AvailabilitySection, type SubVenueOption } from './availability-section'
 
 interface VenueDetailResponse {
@@ -11,6 +13,7 @@ interface VenueDetailResponse {
   name: string
   slug: string
   tagline: string | null
+  media: GalleryMedia[]
   branding: {
     primary_color: string
     secondary_color: string
@@ -63,6 +66,8 @@ export default async function VenuePage({ params, searchParams }: VenuePageProps
     })),
   )
 
+  const coverImage = venue.media.find((m) => m.type === 'image' && m.is_cover) ?? venue.media.find((m) => m.type === 'image')
+
   const style = {
     '--primary': hexToHslComponents(venue.branding.primary_color),
   } as CSSProperties
@@ -75,8 +80,16 @@ export default async function VenuePage({ params, searchParams }: VenuePageProps
         className="relative isolate overflow-hidden text-white"
         style={{ backgroundImage: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}d9 45%, #0A0F1E 130%)` }}
       >
-        <div className="court-lines absolute inset-0 -z-10 opacity-60" />
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12 sm:flex-row sm:items-center">
+        {coverImage ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={coverImage.url} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/90 via-ink/50 to-ink/30" />
+          </>
+        ) : (
+          <div className="court-lines absolute inset-0 -z-10 opacity-60" />
+        )}
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12 sm:py-16 sm:flex-row sm:items-center">
           {venue.branding.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -108,9 +121,11 @@ export default async function VenuePage({ params, searchParams }: VenuePageProps
       </section>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
+        <VenueGallery media={venue.media} venueName={venue.name} />
         <h2 className="mb-1 text-2xl font-extrabold">Check availability</h2>
         <p className="mb-6 text-muted-foreground">Pick a court and a date to see open slots.</p>
         <AvailabilitySection subVenues={subVenues} initialDate={date} />
+        <PermanentBookingCard venueName={venue.name} locations={venue.locations} />
       </div>
     </div>
   )

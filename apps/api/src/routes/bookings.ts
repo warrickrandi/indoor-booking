@@ -10,7 +10,7 @@ import {
 import { authMiddleware } from '../middleware/auth.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { requireVenueStaff } from '../lib/actor.js'
-import { ValidationError, ForbiddenError } from '../lib/errors.js'
+import { ForbiddenError } from '../lib/errors.js'
 import {
   createBooking,
   getBooking,
@@ -32,9 +32,6 @@ export async function register(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const body = CreateBookingBodySchema.parse(req.body)
-      if (req.actor.type === 'player' && body.payment_method === 'pay_at_venue') {
-        throw new ValidationError('Players cannot book pay_at_venue — choose online or bank_transfer')
-      }
       const result = await createBooking(req.actor, body)
       return reply.status(201).send({ data: result })
     },

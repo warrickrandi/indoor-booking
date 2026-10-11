@@ -61,7 +61,7 @@ export default function NewSubVenuePage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['sub-venues', locationId] })
       toast.success('Sub-venue created')
-      router.push(`/locations/${locationId}/sub-venues/${res.data.id}`)
+      router.push(`/locations/${locationId}/sub-venues/${res.data.id}?tab=pricing`)
     },
     onError: showApiErrorToast,
   })

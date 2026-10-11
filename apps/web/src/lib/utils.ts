@@ -30,16 +30,20 @@ export function formatPrice(amount: number): string {
   return `LKR ${amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+// The platform operates in Sri Lanka (UTC+5:30, no DST) and the API generates slots in that
+// timezone, so display times there regardless of where the browser is.
+const DISPLAY_TZ = 'Asia/Colombo'
+
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString([], { dateStyle: 'medium' })
+  return new Date(iso).toLocaleDateString('en-LK', { dateStyle: 'medium', timeZone: DISPLAY_TZ })
 }
 
 export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('en-LK', { hour: 'numeric', minute: '2-digit', timeZone: DISPLAY_TZ })
 }
 
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short', timeZone: DISPLAY_TZ })
 }
 
 export function hexToHslComponents(hex: string): string {
@@ -79,4 +83,9 @@ export const TIER_RANK: Record<'basic' | 'pro' | 'elite', number> = {
   basic: 1,
   pro: 2,
   elite: 3,
+}
+
+/** Reduces "https://Example.com/" to "example.com" so a pasted URL still works as a domain. */
+export function normalizeDomain(value: string | undefined): string {
+  return (value ?? '').trim().replace(/^[a-z]+:\/\//i, '').replace(/\/+$/, '').toLowerCase()
 }

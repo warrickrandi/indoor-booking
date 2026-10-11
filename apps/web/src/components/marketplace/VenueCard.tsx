@@ -10,6 +10,7 @@ export interface VenueCardData {
   tagline: string | null
   primary_color: string
   logo_url: string | null
+  cover_url?: string | null
   cities: string[]
   sport_types: string[]
 }
@@ -29,6 +30,7 @@ export function VenueCard({ venue, href }: VenueCardProps) {
         name={venue.name}
         primaryColor={venue.primary_color}
         logoUrl={venue.logo_url}
+        coverUrl={venue.cover_url}
         sportTypes={venue.sport_types}
         className="h-36"
       />

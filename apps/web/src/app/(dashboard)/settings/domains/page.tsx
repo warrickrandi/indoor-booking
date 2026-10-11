@@ -18,7 +18,7 @@ import {
   type DomainSettingsResponse,
 } from '@/hooks/useDomains'
 import { showApiErrorToast } from '@/lib/api'
-import { TIER_RANK } from '@/lib/utils'
+import { TIER_RANK, normalizeDomain } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +38,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { LoadingPanel } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 
-const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? ''
+const PLATFORM_DOMAIN = normalizeDomain(process.env.NEXT_PUBLIC_PLATFORM_DOMAIN)
 
 export default function DomainsPage() {
   const actor = useAuthStore((state) => state.actor)

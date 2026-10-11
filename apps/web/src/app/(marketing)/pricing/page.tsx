@@ -6,9 +6,6 @@ import { Check } from 'lucide-react'
 
 import { usePublicPlans, type PublicPlan, type BillingCycle } from '@/hooks/useBilling'
 import { cn, formatCurrency } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LoadingPanel } from '@/components/shared/LoadingSpinner'
 
 const TIER_DESCRIPTIONS: Record<string, string> = {
@@ -35,79 +32,98 @@ function planFeatures(plan: PublicPlan): string[] {
   return features
 }
 
+const CYCLES: { value: BillingCycle; label: string }[] = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'annual', label: 'Annual' },
+]
+
 export default function PricingPage() {
   const plans = usePublicPlans()
   const [cycle, setCycle] = useState<BillingCycle>('monthly')
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-lg font-semibold">
-            Indoor Sports Booking
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Get started</Link>
-            </Button>
+    <>
+      <section className="relative isolate overflow-hidden bg-ink text-white">
+        <div className="court-lines absolute inset-0 -z-10 opacity-70" />
+        <div className="absolute -right-20 -top-20 -z-10 h-72 w-72 rounded-full bg-volt/20 blur-3xl" />
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center">
+          <h1 className="text-4xl font-extrabold sm:text-6xl">
+            Simple pricing. <span className="text-volt">Serious bookings.</span>
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-white/70">
+            Choose the plan that fits your venue. Start with a free trial, and upgrade or downgrade anytime.
+          </p>
+          <div role="group" aria-label="Billing period" className="mt-8 inline-flex rounded-full bg-white/10 p-1">
+            {CYCLES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={cycle === option.value}
+                onClick={() => setCycle(option.value)}
+                className={cn(
+                  'rounded-full px-6 py-2 text-sm font-semibold transition-colors',
+                  cycle === option.value ? 'bg-volt text-ink' : 'text-white/80 hover:text-white',
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="mx-auto max-w-5xl px-4 py-12">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Simple, transparent pricing</h1>
-          <p className="mt-2 text-muted-foreground">
-            Choose the plan that fits your venue. Upgrade or downgrade anytime.
-          </p>
-          <Tabs value={cycle} onValueChange={(value) => setCycle(value as BillingCycle)} className="mt-6 inline-block">
-            <TabsList>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="annual">Annual</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
+      <section className="mx-auto max-w-6xl px-4 py-14">
         {plans.isLoading ? (
           <LoadingPanel />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3">
             {(plans.data ?? []).map((plan) => {
               const price = cycle === 'monthly' ? plan.price_monthly : plan.price_annual
+              const featured = plan.tier === 'pro'
               return (
-                <Card key={plan.id} className={cn(plan.tier === 'pro' && 'border-primary shadow-md')}>
-                  <CardHeader>
-                    <CardTitle className="capitalize">{plan.name}</CardTitle>
-                    <CardDescription>{TIER_DESCRIPTIONS[plan.tier]}</CardDescription>
-                    <div className="pt-2">
-                      <span className="text-3xl font-bold">{formatCurrency(price)}</span>
-                      <span className="text-sm text-muted-foreground"> / {cycle === 'monthly' ? 'month' : 'year'}</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm">
-                      {planFeatures(plan).map((feature) => (
-                        <li key={feature} className="flex items-center gap-2">
-                          <Check className="h-4 w-4 shrink-0 text-primary" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button asChild className="w-full">
-                      <Link href="/register">Get started</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <div
+                  key={plan.id}
+                  className={cn(
+                    'relative flex flex-col rounded-3xl border bg-card p-8 shadow-sm',
+                    featured && 'border-2 border-ink shadow-xl md:-translate-y-3',
+                  )}
+                >
+                  {featured && (
+                    <span className="absolute -top-3 left-8 rounded-full bg-volt px-3 py-1 text-xs font-bold text-ink">
+                      Most popular
+                    </span>
+                  )}
+                  <h2 className="font-display text-2xl font-bold capitalize">{plan.name}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{TIER_DESCRIPTIONS[plan.tier]}</p>
+                  <p className="mt-6">
+                    <span className="font-display text-4xl font-extrabold">{formatCurrency(price)}</span>
+                    <span className="text-sm text-muted-foreground"> / {cycle === 'monthly' ? 'month' : 'year'}</span>
+                  </p>
+                  <ul className="mt-6 flex-1 space-y-3 text-sm">
+                    {planFeatures(plan).map((feature) => (
+                      <li key={feature} className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-volt">
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/register"
+                    className={cn(
+                      'mt-8 rounded-full px-6 py-3 text-center text-sm font-semibold transition-colors',
+                      featured ? 'bg-ink text-white hover:bg-ink-soft' : 'border-2 border-ink text-ink hover:bg-ink hover:text-white',
+                    )}
+                  >
+                    Get started
+                  </Link>
+                </div>
               )
             })}
           </div>
         )}
-      </main>
-    </div>
+      </section>
+    </>
   )
 }

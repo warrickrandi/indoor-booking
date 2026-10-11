@@ -28,7 +28,9 @@ export function SubVenuesTab({ locationId }: SubVenuesTabProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Sub-Venues</CardTitle>
-          <CardDescription>Courts, fields, or rooms available for booking at this location</CardDescription>
+          <CardDescription>
+            Courts, fields, or rooms available for booking. Open a court to set its pricing and generate slots.
+          </CardDescription>
         </div>
         {canWrite && (
           <Button size="sm" asChild>
@@ -67,6 +69,7 @@ export function SubVenuesTab({ locationId }: SubVenuesTabProps) {
                 <TableHead>Capacity</TableHead>
                 <TableHead>Pricing Rules</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Set up</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -82,6 +85,18 @@ export function SubVenuesTab({ locationId }: SubVenuesTabProps) {
                   <TableCell>{subVenue.pricing_rules_count}</TableCell>
                   <TableCell>
                     <StatusBadge status={subVenue.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/locations/${locationId}/sub-venues/${subVenue.id}?tab=pricing`}>Pricing</Link>
+                      </Button>
+                      <Button size="sm" asChild>
+                        <Link href={`/locations/${locationId}/sub-venues/${subVenue.id}?tab=generate-slots`}>
+                          Generate slots
+                        </Link>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

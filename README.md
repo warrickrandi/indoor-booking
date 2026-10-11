@@ -158,9 +158,19 @@ Used for bank-transfer payment slip uploads (`POST /api/v1/uploads/slip`, stored
    - Secret Access Key → `STORAGE_SECRET_KEY`
    - S3 endpoint `https://<account-id>.r2.cloudflarestorage.com` → `STORAGE_ENDPOINT` (no bucket name, no trailing slash)
 
-The stored slip URL is `endpoint/bucket/key`, which is not publicly readable. To view
-slips in a browser, enable public access on the bucket (R2.dev subdomain or custom domain)
-and adjust `apps/api/src/lib/storage.ts` to return that public URL.
+**The bucket stays private.** It needs no public access, no r2.dev address and no extra variable:
+only the API server reads and writes it, using the four `STORAGE_*` values above.
+
+- **Payment slips** are stored under `slips/` and are never served publicly.
+- **Venue photos and logos** (venue dashboard -> Media, and Settings -> Branding) are stored under
+  `media/<company_id>/` and `logos/<company_id>/`. Browsers load them through the API at
+  `<API_URL>/api/v1/media/files/<key>`, which streams the file from the bucket with a one-year cache header.
+  Only `media/` and `logos/` keys are served; nothing else in the bucket can be fetched through that route.
+- **Videos** are not uploaded: venues paste a YouTube or Vimeo link.
+
+Because images pass through the API, a cold-started free Render instance serves them slowly on the first
+request; browsers then cache them. Moving to a CDN or a public bucket later only needs the URL builder in
+`apps/api/src/services/media.service.ts` (`fileUrl`) changed.
 
 ### 3. API + worker — Render
 

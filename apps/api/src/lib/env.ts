@@ -37,7 +37,7 @@ const EnvSchema = z.object({
   FRONTEND_URL: z.string().url(),
   API_URL:      z.string().url(),
 
-  PLATFORM_DOMAIN:   z.string().min(1),
+  PLATFORM_DOMAIN:   z.string().min(1).transform((v) => v.trim().replace(/^[a-z]+:\/\//i, '').replace(/\/+$/, '').toLowerCase()),
   VERCEL_TOKEN:      z.preprocess(v => v === '' ? undefined : v, z.string().min(1).optional()),
   VERCEL_PROJECT_ID: z.preprocess(v => v === '' ? undefined : v, z.string().min(1).optional()),
 })

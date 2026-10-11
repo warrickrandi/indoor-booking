@@ -1,14 +1,15 @@
 'use client'
 
+import { useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { UpdateBrandingBodySchema, type UpdateBrandingBody } from '@sports-booking/types'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuthStore } from '@/store/auth.store'
 import { useCompany, type CompanyDetail } from '@/hooks/useCompany'
-import { put, showApiErrorToast } from '@/lib/api'
+import { put, showApiErrorToast, uploadFile } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -75,6 +76,20 @@ function BrandingForm({ company }: { company: CompanyDetail }) {
   const primaryColor = form.watch('primary_color')
   const secondaryColor = form.watch('secondary_color')
   const metaTitle = form.watch('meta_title')
+
+  const logoInput = useRef<HTMLInputElement>(null)
+  const uploadLogo = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      return (await uploadFile<{ logo_url: string }>('/media/logo', formData)).data
+    },
+    onSuccess: (data) => {
+      form.setValue('logo_url', data.logo_url, { shouldDirty: true })
+      toast.success('Logo uploaded')
+    },
+    onError: showApiErrorToast,
+  })
 
   const updateBranding = useMutation({
     mutationFn: (body: UpdateBrandingBody) => put('/company/me/branding', body),
@@ -152,10 +167,27 @@ function BrandingForm({ company }: { company: CompanyDetail }) {
                 name="logo_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Logo URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." {...field} />
-                    </FormControl>
+                    <FormLabel>Logo</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input placeholder="Upload a file, or paste a link" {...field} />
+                      </FormControl>
+                      <input
+                        ref={logoInput}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) uploadLogo.mutate(file)
+                          e.target.value = ''
+                        }}
+                      />
+                      <Button type="button" variant="outline" disabled={uploadLogo.isPending} onClick={() => logoInput.current?.click()}>
+                        {uploadLogo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        Upload
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

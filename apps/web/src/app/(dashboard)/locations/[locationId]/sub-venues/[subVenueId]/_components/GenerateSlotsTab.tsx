@@ -23,7 +23,7 @@ type GenerateSlotsFormValues = z.input<typeof GenerateSlotsBodySchema>
 interface GenerateSlotsResult {
   generated: number
   skipped: number
-  dates: { date: string; generated: number }[]
+  dates: { date: string; generated: number; reason?: string }[]
 }
 
 interface GenerateSlotsTabProps {
@@ -135,10 +135,11 @@ export function GenerateSlotsTab({ locationId, subVenueId }: GenerateSlotsTabPro
             {result.dates.length > 0 && (
               <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm text-muted-foreground">
                 {result.dates.map((d) => (
-                  <li key={d.date} className="flex justify-between">
-                    <span>{formatDate(`${d.date}T00:00:00`)}</span>
-                    <span>
+                  <li key={d.date} className="flex justify-between gap-4">
+                    <span className="shrink-0">{formatDate(`${d.date}T00:00:00`)}</span>
+                    <span className="text-right">
                       {d.generated} slot{d.generated === 1 ? '' : 's'}
+                      {d.reason && <span className="block text-xs text-amber-700">{d.reason}</span>}
                     </span>
                   </li>
                 ))}

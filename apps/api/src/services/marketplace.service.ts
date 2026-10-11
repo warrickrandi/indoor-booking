@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import type { CustomerRegisterBody, CustomerLoginBody, MarketplaceVenuesQuery } from '@sports-booking/types'
 import { prisma } from '../lib/prisma.js'
+import { serializeMedia } from './media.service.js'
 import { redis } from '../lib/redis.js'
 import { signPlayerToken, signPlayerRefreshToken } from '../lib/jwt.js'
 import { addEmailJob } from '../jobs/email.job.js'
@@ -101,6 +102,11 @@ export async function listVenues(query: MarketplaceVenuesQuery) {
       where,
       include: {
         branding: true,
+        media: {
+          where:   { type: 'image' },
+          orderBy: [{ is_cover: 'desc' }, { display_order: 'asc' }],
+          take:    1,
+        },
         locations: {
           where: { status: 'active' },
           include: { sub_venues: { where: { status: 'active' } } },
@@ -125,6 +131,7 @@ export async function listVenues(query: MarketplaceVenuesQuery) {
       tagline:       company.branding?.tagline ?? null,
       primary_color: company.branding?.primary_color ?? '#3B82F6',
       logo_url:      company.branding?.logo_url ?? null,
+      cover_url:     company.media[0]?.url ?? null,
       cities,
       sport_types,
     }
@@ -151,6 +158,7 @@ export async function getVenueBySlug(slug: string) {
     where: { slug, status: 'active' },
     include: {
       branding: true,
+      media: { orderBy: [{ display_order: 'asc' }, { created_at: 'asc' }] },
       locations: {
         where: { status: 'active' },
         orderBy: { display_order: 'asc' },
@@ -171,6 +179,7 @@ export async function getVenueBySlug(slug: string) {
     name: company.name,
     slug: company.slug,
     tagline: company.branding?.tagline ?? null,
+    media: company.media.map(serializeMedia),
     branding: {
       primary_color:    company.branding?.primary_color ?? '#3B82F6',
       secondary_color:  company.branding?.secondary_color ?? '#1E40AF',
