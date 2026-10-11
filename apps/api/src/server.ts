@@ -10,7 +10,7 @@ async function main() {
 
   try {
     await app.listen({ port: env.PORT, host: env.HOST })
-    app.log.info(`API server listening on http://${env.HOST}:${env.PORT}`)
+    console.log(`API server listening on http://${env.HOST}:${env.PORT}`)
     await addSlotCleanupJob()
     await addReminderJob()
     await addAbandonedBookingJob()
