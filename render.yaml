@@ -47,7 +47,3 @@ databases:
   - name: indoor-booking-postgres
     plan: free
     region: singapore
-
-  - name: indoor-booking-redis
-    plan: free
-    region: singapore
