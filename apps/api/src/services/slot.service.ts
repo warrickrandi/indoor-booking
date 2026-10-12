@@ -15,7 +15,6 @@ import { createAuditLog } from '../middleware/audit.js'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js'
 import {
   timeStringToMinutes,
-  minutesToTimeString,
   localDateTimeToUtc,
   formatLocalDate,
   getTodayLocalDateString,
@@ -114,6 +113,18 @@ async function loadSubVenueWithSchedule(subVenueId: string) {
 
 // ─── Slot generation ────────────────────────────────────────────────────────
 
+const RATE_TYPE_PRIORITY: Record<string, number> = { peak: 0, weekend: 1, off_peak: 2, flat: 3 }
+
+function rateTypePriority(rule: PricingRule): number {
+  return RATE_TYPE_PRIORITY[rule.rate_type] ?? 4
+}
+
+/** Minute-of-day for an end/close time, treating 00:00 as midnight at the end of the day. */
+function toEndMinutes(time: string): number {
+  const minutes = timeStringToMinutes(time)
+  return minutes === 0 ? 24 * 60 : minutes
+}
+
 export async function generateSlotsForDate(
   subVenueId: string,
   date: string,
@@ -147,6 +158,7 @@ export async function generateSlotsForDate(
 
   const dateOnly = new Date(`${date}T00:00:00Z`)
   const rules = await prisma.pricingRule.findMany({
+    orderBy: { created_at: 'asc' },
     where: {
       sub_venue_id: subVenueId,
       is_active:    true,
@@ -166,37 +178,49 @@ export async function generateSlotsForDate(
     throw new ValidationError('No pricing rules configured for this day')
   }
 
-  const slotDurationMins = dayRules[0]!.duration_mins
-
   const openMinutes  = timeStringToMinutes(openTime)
-  const closeMinutes = timeStringToMinutes(closeTime)
+  // A close time of 00:00 means "until midnight".
+  const closeMinutes = toEndMinutes(closeTime)
 
+  const band = (r: PricingRule) =>
+    r.peak_start && r.peak_end ? { start: timeStringToMinutes(r.peak_start), end: toEndMinutes(r.peak_end) } : null
+
+  // A rule with a time band applies only when the slot starts inside that band; rules without a
+  // band cover the rest of the day. Within each group the more specific rate type wins, and
+  // ties go to the oldest rule so the result never depends on DB row order.
+  const pickRule = (minute: number): PricingRule | undefined => {
+    const banded = dayRules.filter((r) => {
+      const b = band(r)
+      return b !== null && minute >= b.start && minute < b.end
+    })
+    const candidates = banded.length > 0 ? banded : dayRules.filter((r) => band(r) === null)
+    return candidates.sort((a, b) => rateTypePriority(a) - rateTypePriority(b))[0]
+  }
+
+  // Each slot takes its length from the rule that prices it, so a 60-min peak rule and a
+  // 90-min off-peak rule can share a day. Uncovered gaps jump to the next band start.
   const intervals: { startMinutes: number; endMinutes: number; rule: PricingRule }[] = []
-  for (let start = openMinutes; start + slotDurationMins <= closeMinutes; start += slotDurationMins) {
-    const end = start + slotDurationMins
-    const startTimeStr = minutesToTimeString(start)
-
-    // A rule with a time band applies only when the slot starts inside it (peak bands win over
-    // other bands). Rules without a band are the fallback for the rest of the day.
-    const inBand = (r: PricingRule) =>
-      Boolean(r.peak_start && r.peak_end && startTimeStr >= r.peak_start && startTimeStr < r.peak_end)
-    const bandedRule =
-      dayRules.find((r) => r.rate_type === 'peak' && inBand(r)) ??
-      dayRules.find((r) => r.rate_type !== 'peak' && inBand(r))
-    const hasNoBand   = (r: PricingRule) => !r.peak_start || !r.peak_end
-    const offPeakRule = dayRules.find((r) => r.rate_type === 'off_peak' && hasNoBand(r)) ??
-                        dayRules.find((r) => r.rate_type === 'off_peak')
-    const flatRule    = dayRules.find((r) => (r.rate_type === 'flat' || r.rate_type === 'weekend') && hasNoBand(r))
-    const rule = bandedRule ?? offPeakRule ?? flatRule
-
-    if (rule) {
-      intervals.push({ startMinutes: start, endMinutes: end, rule })
+  let cursor = openMinutes
+  while (cursor < closeMinutes) {
+    const rule = pickRule(cursor)
+    if (!rule) {
+      const nextBandStart = dayRules
+        .map((r) => band(r)?.start)
+        .filter((start): start is number => start !== undefined && start > cursor)
+        .sort((a, b) => a - b)[0]
+      if (nextBandStart === undefined) break
+      cursor = nextBandStart
+      continue
     }
+    const end = cursor + rule.duration_mins
+    if (end > closeMinutes) break
+    intervals.push({ startMinutes: cursor, endMinutes: end, rule })
+    cursor = end
   }
 
   if (intervals.length === 0) {
     onSkip?.(
-      closeMinutes - openMinutes < slotDurationMins
+      closeMinutes - openMinutes < Math.min(...dayRules.map((r) => r.duration_mins))
         ? 'Opening hours are shorter than one slot'
         : 'No pricing rule covers the opening hours (add an Off-Peak or Flat rule without times)',
     )
