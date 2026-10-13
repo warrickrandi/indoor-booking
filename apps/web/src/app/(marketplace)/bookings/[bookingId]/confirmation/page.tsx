@@ -103,7 +103,7 @@ export default function BookingConfirmationPage() {
 
       {data.payment_method === 'bank_transfer' && (
         <div className="mb-6 space-y-4">
-          <BankDetails venue={{ name: data.time_slot.location_name }} />
+          <BankDetails venue={{ name: data.time_slot.location_name }} account={data.bank_details} />
 
           {pendingVerification && (
             <div className="rounded-md border bg-muted/50 p-4 text-sm text-muted-foreground">

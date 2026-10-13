@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
@@ -201,6 +202,14 @@ export default function BookingDetailPage() {
                 <p className="font-medium">{PAYMENT_METHOD_LABELS[data.payment_method] ?? data.payment_method}</p>
                 <p className="text-sm text-muted-foreground">{formatCurrency(data.total_amount, data.currency)}</p>
               </div>
+              {data.recurring_request_id && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm text-muted-foreground">Permanent slot</p>
+                  <Link href={`/permanent-slots/${data.recurring_request_id}`} className="text-sm font-medium underline">
+                    View the weekly series this booking belongs to
+                  </Link>
+                </div>
+              )}
               {data.notes && (
                 <div className="sm:col-span-2">
                   <p className="text-sm text-muted-foreground">Notes</p>

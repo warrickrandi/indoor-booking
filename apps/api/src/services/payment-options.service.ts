@@ -13,7 +13,7 @@ export interface PaymentOptions {
 export async function getPaymentOptions(companyId: string): Promise<PaymentOptions> {
   const [activeGateway, billing] = await Promise.all([
     prisma.venuePaymentConfig.findFirst({
-      where:  { company_id: companyId, is_active: true },
+      where:  { company_id: companyId, is_active: true, gateway: { is_active: true } },
       select: { id: true },
     }),
     prisma.companyBilling.findUnique({

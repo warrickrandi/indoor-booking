@@ -41,6 +41,7 @@ export function serializeBooking(booking: Booking) {
     notes:          booking.notes,
     booked_by_type: booking.booked_by_type,
     booked_by_id:   booking.booked_by_id,
+    recurring_request_id: booking.recurring_request_id,
     created_at:     booking.created_at.toISOString(),
     updated_at:     booking.updated_at.toISOString(),
   }
@@ -379,9 +380,23 @@ export async function getBooking(bookingId: string, actor: Actor) {
     assertVenueAccess(actor, booking.time_slot.sub_venue.location_id)
   }
 
+  const billing =
+    booking.payment_method === 'bank_transfer'
+      ? await prisma.companyBilling.findUnique({ where: { company_id: booking.company_id } })
+      : null
+
   return {
     ...serializeBooking(booking),
     time_slot: serializeTimeSlotSummary(booking.time_slot),
+    bank_details:
+      billing?.bank_name && billing.bank_account_number
+        ? {
+            bank_name:           billing.bank_name,
+            bank_account_name:   billing.bank_account_name,
+            bank_account_number: billing.bank_account_number,
+            bank_branch:         billing.bank_branch,
+          }
+        : null,
     customer: {
       id:        booking.customer.id,
       full_name: booking.customer.full_name,

@@ -1,19 +1,19 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
-import { PaymentMethodSchema, type CreateBookingBody } from '@sports-booking/types'
+import { PaymentMethodSchema, type CreateBookingBody, type PaymentMethod } from '@sports-booking/types'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useLocations } from '@/hooks/useLocations'
 import { useSubVenues } from '@/hooks/useSubVenues'
 import { useSlots } from '@/hooks/useSlots'
-import { post, showApiErrorToast } from '@/lib/api'
+import { get, post, showApiErrorToast } from '@/lib/api'
 import { formatDate, formatTime, todayDateString } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -87,6 +87,26 @@ export default function NewBookingPage() {
     resolver: zodResolver(CustomerDetailsFormSchema),
     defaultValues: { payment_method: 'pay_at_venue', full_name: '', email: '', phone: '', notes: '' },
   })
+
+  // Only offer the payment methods this venue has enabled — the API rejects any other.
+  const slotDetail = useQuery({
+    queryKey: ['slot-detail', lock?.slotId],
+    queryFn: async () =>
+      (await get<{ payment_options: Record<PaymentMethod, boolean> }>(`/slots/${lock!.slotId}`)).data,
+    enabled: !!lock,
+  })
+  const paymentOptions = slotDetail.data?.payment_options
+  const availableMethods = useMemo(
+    () => PaymentMethodSchema.options.filter((method) => paymentOptions?.[method] ?? method === 'pay_at_venue'),
+    [paymentOptions],
+  )
+
+  useEffect(() => {
+    const current = form.getValues('payment_method')
+    if (availableMethods.length > 0 && !availableMethods.includes(current)) {
+      form.setValue('payment_method', availableMethods[0]!)
+    }
+  }, [availableMethods, form])
 
   useEffect(() => {
     return () => {
@@ -287,7 +307,7 @@ export default function NewBookingPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {PaymentMethodSchema.options.map((method) => (
+                          {availableMethods.map((method) => (
                             <SelectItem key={method} value={method}>
                               {PAYMENT_METHOD_LABELS[method]}
                             </SelectItem>

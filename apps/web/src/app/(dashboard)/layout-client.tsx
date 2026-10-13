@@ -20,6 +20,7 @@ import {
   Globe,
   Receipt,
   Images,
+  Repeat,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -48,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/overview', icon: LayoutDashboard, permission: null },
   { label: 'Locations', href: '/locations', icon: MapPin, permission: 'locations.read' },
   { label: 'Bookings', href: '/bookings', icon: CalendarCheck, permission: 'bookings.read' },
+  { label: 'Permanent Slots', href: '/permanent-slots', icon: Repeat, permission: 'bookings.read' },
   { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports.daily' },
   { label: 'Slots', href: '/slots', icon: CalendarClock, permission: 'slots.read' },
   { label: 'Staff', href: '/settings/staff', icon: Users, permission: 'staff.invite' },

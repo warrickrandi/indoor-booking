@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { CompanyBranding } from '@sports-booking/db'
+import type { CompanyBilling, CompanyBranding } from '@sports-booking/db'
 import type {
   UpdateCompanyBody,
   UpdateBrandingBody,
+  UpdateBankDetailsBody,
   InviteMemberBody,
   UpdateMemberBody,
   VenueStaffActor,
@@ -109,6 +110,55 @@ export async function upsertBranding(companyId: string, data: UpdateBrandingBody
   })
 
   return serializeBranding(branding)
+}
+
+// ─── Bank transfer details ──────────────────────────────────────────────────
+
+export function serializeBankDetails(billing: CompanyBilling | null) {
+  return {
+    bank_name:           billing?.bank_name ?? null,
+    bank_account_name:   billing?.bank_account_name ?? null,
+    bank_account_number: billing?.bank_account_number ?? null,
+    bank_branch:         billing?.bank_branch ?? null,
+    configured:          Boolean(billing?.bank_name && billing.bank_account_number),
+    updated_at:          billing?.updated_at.toISOString() ?? null,
+  }
+}
+
+export async function getBankDetails(companyId: string) {
+  const billing = await prisma.companyBilling.findUnique({ where: { company_id: companyId } })
+  return serializeBankDetails(billing)
+}
+
+export async function updateBankDetails(
+  companyId: string,
+  data: UpdateBankDetailsBody,
+  actor: { sub: string; type: 'venue_staff' | 'platform_admin' },
+) {
+  const company = await prisma.company.findUnique({ where: { id: companyId }, include: { billing: true } })
+  if (!company) {
+    throw new NotFoundError('Company')
+  }
+  const before = company.billing
+
+  const billing = await prisma.companyBilling.upsert({
+    where:  { company_id: companyId },
+    create: { company_id: companyId, ...data },
+    update: data,
+  })
+
+  await createAuditLog({
+    actor_id:    actor.sub,
+    actor_type:  actor.type,
+    company_id:  companyId,
+    action:      'company.bank_details_updated',
+    entity_type: 'company',
+    entity_id:   companyId,
+    before:      { configured: serializeBankDetails(before).configured, bank_name: before?.bank_name ?? null },
+    after:       { configured: serializeBankDetails(billing).configured, bank_name: billing.bank_name },
+  })
+
+  return serializeBankDetails(billing)
 }
 
 export async function getSubscription(companyId: string) {

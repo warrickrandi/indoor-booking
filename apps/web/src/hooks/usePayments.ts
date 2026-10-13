@@ -46,3 +46,33 @@ export function useUpdateGatewayConfig(slug: string) {
     },
   })
 }
+
+export interface BankDetailsInput {
+  bank_name: string | null
+  bank_account_name: string | null
+  bank_account_number: string | null
+  bank_branch: string | null
+}
+
+export interface BankDetailsConfig extends BankDetailsInput {
+  configured: boolean
+  updated_at: string | null
+}
+
+export function useBankDetails() {
+  return useQuery({
+    queryKey: ['bank-details'],
+    queryFn: async () => (await get<BankDetailsConfig>('/company/me/bank-details')).data,
+  })
+}
+
+export function useUpdateBankDetails() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: BankDetailsInput) => put<BankDetailsConfig>('/company/me/bank-details', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bank-details'] })
+    },
+  })
+}

@@ -125,7 +125,12 @@ export default async function VenuePage({ params, searchParams }: VenuePageProps
         <h2 className="mb-1 text-2xl font-extrabold">Check availability</h2>
         <p className="mb-6 text-muted-foreground">Pick a court and a date to see open slots.</p>
         <AvailabilitySection subVenues={subVenues} initialDate={date} />
-        <PermanentBookingCard venueName={venue.name} locations={venue.locations} />
+        <PermanentBookingCard
+          venueName={venue.name}
+          venueSlug={venue.slug}
+          locations={venue.locations}
+          courts={subVenues.map(({ id, name, location_name }) => ({ id, name, location_name }))}
+        />
       </div>
     </div>
   )

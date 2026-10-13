@@ -18,6 +18,7 @@ import { LoadingPanel } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { PriceDisplay } from '@/components/marketplace/PriceDisplay'
+import { MyPermanentSlots } from '@/components/marketplace/MyPermanentSlots'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
@@ -90,6 +91,8 @@ export default function MyBookingsPage() {
           </SelectContent>
         </Select>
       </div>
+
+      <MyPermanentSlots />
 
       {bookings.isLoading ? (
         <LoadingPanel className="py-24" />

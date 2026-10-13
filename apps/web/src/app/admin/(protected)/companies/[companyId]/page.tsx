@@ -3,13 +3,17 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   useAdminCompanyDetail,
   useAdminSubscriptionPlans,
   useUpdateCompanySubscription,
   useAdminMarkInvoicePaid,
+  useAdminUpdateBankDetails,
 } from '@/hooks/useAdmin'
+import { showApiErrorToast } from '@/lib/api'
+import { BankDetailsForm } from '@/components/shared/BankDetailsForm'
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -433,20 +437,14 @@ export default function AdminCompanyDetailPage() {
                       <span className="text-muted-foreground">Tax ID</span>
                       <span>{data.billing.tax_id ?? '—'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bank</span>
-                      <span>{data.billing.bank_name ?? '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bank Account</span>
-                      <span>{data.billing.bank_account_number ?? '—'}</span>
-                    </div>
                   </>
                 ) : (
                   <p className="text-muted-foreground">No billing details on file.</p>
                 )}
               </CardContent>
             </Card>
+
+            <BankDetailsCard companyId={companyId} billing={data.billing} />
 
             <Card>
               <CardHeader>
@@ -499,5 +497,68 @@ export default function AdminCompanyDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function BankDetailsCard({
+  companyId,
+  billing,
+}: {
+  companyId: string
+  billing: {
+    bank_name: string | null
+    bank_account_name: string | null
+    bank_account_number: string | null
+    bank_branch: string | null
+  } | null
+}) {
+  const updateBankDetails = useAdminUpdateBankDetails(companyId)
+  const [editing, setEditing] = useState(false)
+  const configured = Boolean(billing?.bank_name && billing.bank_account_number)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-2">
+          Bank Transfer Details
+          <Badge variant={configured ? 'success' : 'secondary'}>{configured ? 'Offered at checkout' : 'Not offered'}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {editing ? (
+          <BankDetailsForm
+            initial={billing}
+            isPending={updateBankDetails.isPending}
+            onCancel={() => setEditing(false)}
+            onSubmit={(values) =>
+              updateBankDetails.mutate(values, {
+                onSuccess: () => {
+                  toast.success('Bank details saved')
+                  setEditing(false)
+                },
+                onError: showApiErrorToast,
+              })
+            }
+          />
+        ) : (
+          <>
+            {[
+              ['Bank', billing?.bank_name],
+              ['Account Holder', billing?.bank_account_name],
+              ['Account Number', billing?.bank_account_number],
+              ['Branch', billing?.bank_branch],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="text-right">{value || '—'}</span>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => setEditing(true)}>
+              Edit Bank Details
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }

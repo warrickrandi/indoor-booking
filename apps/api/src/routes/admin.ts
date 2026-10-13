@@ -10,6 +10,7 @@ import {
   ListBillingInvoicesQuerySchema,
   CreateManualInvoiceBodySchema,
   MarkInvoicePaidBodySchema,
+  UpdateBankDetailsBodySchema,
 } from '@sports-booking/types'
 import { authMiddleware } from '../middleware/auth.js'
 import { requirePlatformAdmin } from '../middleware/rbac.js'
@@ -29,6 +30,7 @@ import {
   createManualInvoice,
   markInvoicePaid,
 } from '../services/admin.service.js'
+import { updateBankDetails } from '../services/company.service.js'
 
 export async function register(fastify: FastifyInstance) {
   fastify.get(
@@ -71,6 +73,21 @@ export async function register(fastify: FastifyInstance) {
       const { companyId } = req.params as { companyId: string }
       const body = UpdateCompanySubscriptionBodySchema.parse(req.body)
       const result = await updateCompanySubscription(companyId, body, actor)
+      return reply.send({ data: result })
+    },
+  )
+
+  fastify.put(
+    '/companies/:companyId/bank-details',
+    {
+      schema:     { body: zodToJsonSchema(UpdateBankDetailsBodySchema) },
+      preHandler: [authMiddleware, requirePlatformAdmin()],
+    },
+    async (req, reply) => {
+      const actor = requirePlatformAdminActor(req)
+      const { companyId } = req.params as { companyId: string }
+      const body = UpdateBankDetailsBodySchema.parse(req.body)
+      const result = await updateBankDetails(companyId, body, actor)
       return reply.send({ data: result })
     },
   )

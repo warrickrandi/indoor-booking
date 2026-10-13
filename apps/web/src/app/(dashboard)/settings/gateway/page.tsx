@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { CreditCard, Loader2 } from 'lucide-react'
+import { CreditCard, Landmark, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuthStore } from '@/store/auth.store'
@@ -10,8 +10,11 @@ import {
   useAvailableGateways,
   useGatewayConfigBySlug,
   useUpdateGatewayConfig,
+  useBankDetails,
+  useUpdateBankDetails,
   type GatewaySummary,
 } from '@/hooks/usePayments'
+import { BankDetailsForm } from '@/components/shared/BankDetailsForm'
 import { GATEWAY_CREDENTIAL_FIELDS } from '@/lib/gateway-fields'
 import { showApiErrorToast } from '@/lib/api'
 import { formatDateTime } from '@/lib/utils'
@@ -50,7 +53,9 @@ export default function GatewayPage() {
 
   return (
     <div>
-      <PageHeader title="Payment Gateway" description="Choose and configure how your venue accepts online payments" />
+      <PageHeader title="Payments" description="Choose how your venue accepts payments from customers" />
+
+      <BankTransferCard />
 
       {gateways.isLoading ? (
         <LoadingPanel />
@@ -92,6 +97,77 @@ export default function GatewayPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function BankTransferCard() {
+  const bankDetails = useBankDetails()
+  const updateBankDetails = useUpdateBankDetails()
+  const [editing, setEditing] = useState(false)
+
+  if (bankDetails.isLoading) {
+    return <LoadingPanel />
+  }
+
+  const data = bankDetails.data
+  const showForm = editing || !data?.configured
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Landmark className="h-5 w-5" />
+            Bank Transfer
+          </span>
+          <Badge variant={data?.configured ? 'success' : 'secondary'}>
+            {data?.configured ? 'Offered to customers' : 'Not offered'}
+          </Badge>
+        </CardTitle>
+        <CardDescription>
+          Customers who choose bank transfer see these details, transfer the amount and upload a slip for you to verify.
+          {data?.updated_at && <> Last updated {formatDateTime(data.updated_at)}.</>}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {showForm ? (
+          <BankDetailsForm
+            key={data?.updated_at ?? 'new'}
+            initial={data}
+            isPending={updateBankDetails.isPending}
+            onCancel={data?.configured ? () => setEditing(false) : undefined}
+            onSubmit={(values) =>
+              updateBankDetails.mutate(values, {
+                onSuccess: () => {
+                  toast.success('Bank details saved')
+                  setEditing(false)
+                },
+                onError: showApiErrorToast,
+              })
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {[
+                ['Bank', data?.bank_name],
+                ['Account holder', data?.bank_account_name],
+                ['Account number', data?.bank_account_number],
+                ['Branch', data?.bank_branch],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-sm text-muted-foreground">{label}</dt>
+                  <dd className="font-mono">{value || '—'}</dd>
+                </div>
+              ))}
+            </dl>
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              Update Bank Details
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

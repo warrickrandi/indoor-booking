@@ -7,6 +7,7 @@ import type {
 
 import { adminGet, adminPost, adminPut } from '@/lib/admin-api'
 import type { BookingSummary } from './useBookings'
+import type { BankDetailsInput } from './usePayments'
 
 export interface AdminStats {
   total_companies: number
@@ -202,6 +203,18 @@ export function useUpdateCompanySubscription(companyId: string) {
   return useMutation({
     mutationFn: (body: UpdateCompanySubscriptionBody) =>
       adminPut<AdminCompanyDetail>(`/admin/companies/${companyId}/subscription`, body, { requireAuth: true }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] })
+    },
+  })
+}
+
+export function useAdminUpdateBankDetails(companyId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: BankDetailsInput) =>
+      adminPut(`/admin/companies/${companyId}/bank-details`, body, { requireAuth: true }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] })
     },

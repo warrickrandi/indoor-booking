@@ -5,6 +5,7 @@ import {
   UpdateBrandingBodySchema,
   InviteMemberBodySchema,
   UpdateMemberBodySchema,
+  UpdateBankDetailsBodySchema,
 } from '@sports-booking/types'
 import { authMiddleware } from '../middleware/auth.js'
 import { requirePermission } from '../middleware/rbac.js'
@@ -18,6 +19,8 @@ import {
   inviteMember,
   updateMember,
   removeMember,
+  getBankDetails,
+  updateBankDetails,
 } from '../services/company.service.js'
 
 export async function register(fastify: FastifyInstance) {
@@ -55,6 +58,30 @@ export async function register(fastify: FastifyInstance) {
       const actor = requireVenueStaff(req)
       const body = UpdateBrandingBodySchema.parse(req.body)
       const result = await upsertBranding(actor.company_id, body)
+      return reply.send({ data: result })
+    },
+  )
+
+  fastify.get(
+    '/me/bank-details',
+    { preHandler: [authMiddleware, requirePermission('payments.gateway_config')] },
+    async (req, reply) => {
+      const actor = requireVenueStaff(req)
+      const result = await getBankDetails(actor.company_id)
+      return reply.send({ data: result })
+    },
+  )
+
+  fastify.put(
+    '/me/bank-details',
+    {
+      schema:     { body: zodToJsonSchema(UpdateBankDetailsBodySchema) },
+      preHandler: [authMiddleware, requirePermission('payments.gateway_config')],
+    },
+    async (req, reply) => {
+      const actor = requireVenueStaff(req)
+      const body = UpdateBankDetailsBodySchema.parse(req.body)
+      const result = await updateBankDetails(actor.company_id, body, actor)
       return reply.send({ data: result })
     },
   )

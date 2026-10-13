@@ -27,6 +27,7 @@ export interface BookingSummary {
   notes: string | null
   booked_by_type: string
   booked_by_id: string | null
+  recurring_request_id: string | null
   created_at: string
   updated_at: string
   time_slot: TimeSlotSummary
@@ -58,8 +59,16 @@ export interface PaymentTransaction {
   bank_verifications: BankVerification[]
 }
 
+export interface BookingBankDetails {
+  bank_name: string
+  bank_account_name: string | null
+  bank_account_number: string
+  bank_branch: string | null
+}
+
 export interface BookingDetail extends Omit<BookingSummary, 'customer'> {
   customer: { id: string; full_name: string; email: string; phone: string }
+  bank_details: BookingBankDetails | null
   payment_transactions: PaymentTransaction[]
   status_log: BookingStatusLogEntry[]
 }

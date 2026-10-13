@@ -24,6 +24,7 @@ import { register as registerMediaRoutes } from './routes/media.js'
 import { register as registerAdminRoutes } from './routes/admin.js'
 import { register as registerReportsRoutes } from './routes/reports.js'
 import { register as registerBillingRoutes } from './routes/billing.js'
+import { register as registerRecurringRequestRoutes } from './routes/recurring-requests.js'
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -113,6 +114,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(registerAdminRoutes, { prefix: '/api/v1/admin' })
   await fastify.register(registerReportsRoutes, { prefix: '/api/v1/reports' })
   await fastify.register(registerBillingRoutes, { prefix: '/api/v1/billing' })
+  await fastify.register(registerRecurringRequestRoutes, { prefix: '/api/v1/recurring-requests' })
 
   return fastify
 }

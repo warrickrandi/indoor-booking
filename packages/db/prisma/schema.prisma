@@ -79,6 +79,7 @@ model Company {
   locations             Location[]
   customers             Customer[]
   bookings              Booking[]
+  recurring_requests    RecurringBookingRequest[]
   payment_configs       VenuePaymentConfig[]
   email_configs         CompanyEmailConfig[]
   email_templates       EmailTemplate[]
@@ -306,6 +307,7 @@ model Location {
   holidays           LocationHoliday[]
   sub_venues         SubVenue[]
   member_assignments MemberLocationAssignment[]
+  recurring_requests RecurringBookingRequest[]
 
   @@index([company_id])
   @@map("locations")
@@ -358,8 +360,9 @@ model SubVenue {
   updated_at    DateTime @updatedAt
 
   location      Location      @relation(fields: [location_id], references: [id], onDelete: Cascade)
-  pricing_rules PricingRule[]
-  time_slots    TimeSlot[]
+  pricing_rules      PricingRule[]
+  time_slots         TimeSlot[]
+  recurring_requests RecurringBookingRequest[]
 
   @@index([location_id])
   @@index([company_id])
@@ -431,8 +434,9 @@ model Customer {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  company  Company?  @relation(fields: [company_id], references: [id])
-  bookings Booking[]
+  company            Company?                  @relation(fields: [company_id], references: [id])
+  bookings           Booking[]
+  recurring_requests RecurringBookingRequest[]
 
   @@index([company_id])
   @@index([email])
@@ -452,12 +456,15 @@ model Booking {
   notes          String?
   booked_by_type String   @default("player")
   booked_by_id   String?  @db.Uuid
+  /// Set when the booking was created by approving a permanent (recurring) slot request.
+  recurring_request_id String?  @db.Uuid
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
   company              Company              @relation(fields: [company_id], references: [id])
   customer             Customer             @relation(fields: [customer_id], references: [id])
   time_slot            TimeSlot             @relation(fields: [time_slot_id], references: [id])
+  recurring_request    RecurringBookingRequest? @relation(fields: [recurring_request_id], references: [id], onDelete: SetNull)
   status_log           BookingStatusLog[]
   payment_transactions PaymentTransaction[]
   email_logs           EmailLog[]
@@ -467,7 +474,41 @@ model Booking {
   @@index([status])
   @@index([time_slot_id])
   @@index([company_id, status, created_at])
+  @@index([recurring_request_id])
   @@map("bookings")
+}
+
+/// A player's (or staff-entered) request for the same court at the same time every week.
+/// Staff review it; approving creates one confirmed pay-at-venue booking per matching slot.
+model RecurringBookingRequest {
+  id           String    @id @default(uuid()) @db.Uuid
+  company_id   String    @db.Uuid
+  location_id  String    @db.Uuid
+  sub_venue_id String    @db.Uuid
+  customer_id  String    @db.Uuid
+  day_of_week  Int       // 0 (Sunday) – 6 (Saturday)
+  start_time   String    // HH:MM, venue local time
+  end_time     String    // HH:MM, venue local time
+  start_date   DateTime  @db.Date
+  end_date     DateTime  @db.Date
+  notes        String?
+  source       String    @default("player") // 'player' | 'staff'
+  status       String    @default("pending") // 'pending' | 'approved' | 'rejected' | 'cancelled'
+  review_note  String?
+  reviewed_by  String?   @db.Uuid
+  reviewed_at  DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  company   Company   @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  location  Location  @relation(fields: [location_id], references: [id], onDelete: Cascade)
+  sub_venue SubVenue  @relation(fields: [sub_venue_id], references: [id], onDelete: Cascade)
+  customer  Customer  @relation(fields: [customer_id], references: [id])
+  bookings  Booking[]
+
+  @@index([company_id, status, created_at])
+  @@index([customer_id])
+  @@map("recurring_booking_requests")
 }
 
 model BookingStatusLog {
